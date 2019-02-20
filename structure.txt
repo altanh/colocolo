@@ -1,0 +1,24 @@
+<- = provided
+
+lang:
+    ast:        representation of relations
+        make-bound: relation -> tuple list -> tuple list -> bound
+
+    bounds:     part of definition of KodKod problem--lower bounds what tuple must contain, upper bounds what it may contain (see tacas07)
+    sketch:     {??}
+    universe:   part of definition of KodKod problem--universe of all atoms
+
+lib:
+    alloy:
+        scope: define kodkod universe?
+    print:
+    simplify-solve:
+    simplify:
+        commutative?
+        canonicalize-commutative-ops
+        iden
+        empty?
+        full?
+        subset?
+        simplify-identity-values
+        <- simplify
