@@ -77,7 +77,11 @@
     [(? node/expr/op/<:?)
      (matrix/domain universe (car args) (second args))]
     [(? node/expr/op/:>?)
-     (matrix/range universe (car args) (second args))]))
+     (matrix/range universe (car args) (second args))]
+    [(? node/expr/op/ite?)
+     (if (list-ref args 0)
+         (list-ref args 1)
+         (list-ref args 2))]))
 
 
 (define (interpret-comprehension universe relations decls f cache)

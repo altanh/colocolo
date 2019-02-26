@@ -116,6 +116,10 @@
 (define-op/closure ^ #f)
 (define-op/closure * @*)
 
+(define-syntax-rule (define-op/ite id)
+  (define-expr-op id get-first #:same-arity? #t #:min-length 2 #:max-length 2))
+(define-op/ite ite)
+
 ;; -- comprehensions -----------------------------------------------------------
 
 (struct node/expr/comprehension node/expr (decls formula)

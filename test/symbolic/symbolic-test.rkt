@@ -1,6 +1,6 @@
 #lang rosette
 
-(require ocelot "../util.rkt"
+(require "../../ocelot.rkt" "../util.rkt"
          rosette/lib/angelic rosette/lib/synthax
          rackunit rackunit/text-ui)
 
