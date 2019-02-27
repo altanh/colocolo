@@ -32,6 +32,24 @@
                                  [else #f])))]))
       (cons rel mat))))
 
+; As above, but assumes the bounds are already in index form
+(define (instantiate-bounds* bounds)
+  (define U (bounds-universe bounds))
+  (interpretation
+   U
+   (for/list ([bnd (in-list (bounds-entries bounds))])
+     (define rel (bound-relation bnd))
+     (define size (expt (universe-size U) (relation-arity rel)))
+     (define mat
+       (cond [(equal? (bound-lower bnd) (bound-upper bnd))
+              (matrix (for/list ([i (in-range size)]) (set-member? (bound-upper bnd) i)))]
+             [else
+              (matrix (for/list ([i (in-range size)])
+                        (cond [(set-member? (bound-lower bnd) i) #t]
+                              [(set-member? (bound-upper bnd) i) (define-symbolic* r boolean?) r]
+                              [else #f])))]))
+     (cons rel mat))))
+
 (define (interpretation-union . interps)
   (define U (interpretation-universe (car interps)))
   (interpretation U (for*/list ([i (in-list interps)][e (in-list (interpretation-entries i))]) e)))
