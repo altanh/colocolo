@@ -1,0 +1,106 @@
+% Thomas Bernardi
+% University of Washington
+% HLIN501 Study Guide
+% November 2017
+
+\documentclass{article}
+\usepackage[T1]{fontenc}
+% \usepackage{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\graphicspath{ {./graphs/} }
+\usepackage[noend]{algorithmic}
+\usepackage{amsmath, amsfonts, amsthm, amssymb} 
+\usepackage{listings}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[subsection]
+\newtheorem{theorem}{Theorem}[section]
+\title{Let's sk*lemize some f\%rmula\$!}
+\date{February 2019}
+\author{Thomas Bernardi}
+
+\begin{document}
+	\maketitle
+	\begin{center}	
+		\textit{Everything is a lie, nothing is real.} \\
+    \end{center}
+
+    \section{What is Skolemization?}
+
+    Skolemization is a process whomst'd've allows us to remove (semantically) existential quantifiers, and replace existentially quantified variables with functions, or relations in the case of alloy. Skolemization relies on a key second order equivalence:
+
+    $$\forall x \exists y~.~P(x, y) \Leftrightarrow \exists f \forall x~.~P(x, f(x))$$
+
+    where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively we are translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ was free, so we can drop the exists and reason about the satisfiability of the formula.
+
+    Neat.
+
+    \section{How does skolemize?}
+
+    Skolemization in alloy/kodkod is a tricky beast. Note when we say ``existential quantifiers'' we are talking about this in the semantic sense: ``$\exists$'' and ``$\neg\forall$''---the same holds for ``universal quantifiers'': ``$\forall$'' and ``$\neg \exists$.''
+
+    At it's core skolemization is very simple: as we descend the AST, we keep track of in-scope variables $U$ that are universally quantified. When we hit an existentially quantified variable $v$, we create a function $f$ from the variables in $U$ to $v$, replace every occurrence of $v$ with $f$ in every subtree, and return the expression with the quantifier removed. Unfortunately it is not quite this simple...
+
+    \subsection{Some vocabularies:}
+
+    \theoremstyle{definition}
+    \begin{definition}{Declaration}
+        A declaration allows us to define relations in terms of other relations (and all relation declarations can eventually be traced back to relations in the universe). A declaration contains a \textbf{variable}, a \textbf{multiplicity}, and an \textbf{expression}.
+
+        \begin{center}
+            \begin{tabular}{c c c c c}
+                $\exists$ & $x$ & : & some & $E$ \\
+                & variable & & multiplicity & expression
+                
+            \end{tabular}
+        \end{center}
+    \end{definition}
+
+    \subsection{The gritty nitty details}
+
+    An existential quantifier will bring one or more variables into scope with one or more \textbf{declarations}. For each of these \textbf{declarations} $d = v~:~m~R$, we must do the following:
+
+    Assume $N$ is a list of all universally quantified variables that are currently in scope.
+
+    \begin{itemize}
+        \item Define the \textbf{skolem relation}, $S$ of arity $\text{size}(N) + \text{arity}(v)$ (every element of $N$ should be unary).
+        \item Define our \textbf{skolem expression} which is what will replace every occurrence of $v$ further down the AST.
+        \item Approximate an \textbf{upper bound} for the \textbf{skolem relation}
+        \item Calculate \textbf{domain constraints} that ensure the ``inputs'' to $S$ are constrained in the same way that their corresponding universally quantified variables are---store these, these will be conjuncted with the formula on the way up the AST once there are no more existential quantifiers.
+        \item Add \textbf{range constraints} to the formula to ensure that the ``outputs'' of $S$ are constrained in the same way as $v$.
+    \end{itemize}
+
+    \subsubsection*{Skolem Expression}
+
+    The \textbf{skolem expression}, $E$, is what actually replaces $v$. It is the result of joining each element successively with the $S$, or $E = f~N~S$ where $f$ is defined as follows:
+    
+    \begin{align*}
+        f~[]~X& = X\\
+        f~v_i::L~X& = f~L~v_i.X
+    \end{align*}
+
+    \subsubsection*{Upper Bound}
+
+    \subsubsection*{Domain Constraints}
+
+    Suppose $R$ is of arity $n$. We call $U$ the universe. Let $T = S.U.\dots$ where $U$ is joined to $S$ $n$ times. Let the $i$th declaration $v_i~:~m_i~R_i$ be the declaration that binds the $i$th variable, $v_i$, in $N$. Let $k = \text{length}(N)$. Our domain constraint is:
+    $$T \in \{v_0~:~m_0~R_0, \dots, v_k~:~m_k~R_k~\vert~\top\}$$
+
+    Note the expression $\{v_0~:~m_0~R_0, \dots, v_k~:~m_k~R_k~\vert~\top\}$ defines a $k$-ary relation where the $i$th element obeys the $i$th \textbf{declaration} with no other constraints (any relation satisfies $\top$). ??
+
+
+
+    \subsubsection*{Range Constraints}
+
+    Our range constraint is simply $E \in m~R$. Let $f$ be the formula with every occurrence of $v$ with $E$. When our quantifier is $\exists$ we conjoin this with our expression ($E \in m~R \land f$) and when our quantifier is $\neg \forall$ we return $E \in m~R \to f$.
+
+    \subsection{An example}
+
+  \end{document}
+ 
