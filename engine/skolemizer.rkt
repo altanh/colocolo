@@ -9,9 +9,11 @@
 ; added to the problem : skolemized-bounds only
 ; contains new bounds, the caller is responsible for adding
 ; these decls to the problem bounds
-(struct skolemized (bounds topSkolemConstraints formula))
+(struct skolemized (bounds top-skolem-constraints formula)
+  #:transparent)
 
-(struct skolem (relation expr upper-bound domain range))
+(struct skolem (relation expr upper-bound domain-constraint range-constraint)
+  #:transparent)
 ; probably will have to pass back up the bounds created for the skolems
 ; TODO : add relations argument to check if referenced relation in universe?
 ; TODO : use cache
@@ -67,16 +69,22 @@
     ['some #:when (! negated) (skolemize)]
     [_ (not-skolemize)]))
 
-(define (create-skolem decl nonSkolems)
-  (let ([relation (match-let ([(cons var relation) decl])
-                    (declare-relation (+ (relation-arity var) (length nonSkolems))))])
-    (let ([expr empty]
-          [upper-bound empty]
-          [domain-constraints empty]
-          [range-constraints empty])
-      (skolem relation expr upper-bound domain-constraints range-constraints))))
+(define (create-skolem decl non-skolems)
+  (match-let
+      ([(cons decl-var decl-expr) decl])
+       (let* ([relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)))]
+              [expr (foldl (lambda (non-skolem expr)
+                             (join (car non-skolem) expr)) relation non-skolems)]
+              [upper-bound empty]
+              [domain-constraint (in (for/fold
+                                        ([joined relation])
+                                        ([i (relation-arity decl-var)])
+                                         (join univ joined))
+                                       (comprehension non-skolems true))]
+              [range-constraints (in expr decl-expr)])
+         (skolem relation expr upper-bound domain-constraint range-constraints))))
 
-(define (add-to-repEnv repEnv decls nonSkolems)
+(define (add-to-rep-env repEnv decls nonSkolems)
   (foldl (λ (decl repEnv)
            (match-let ([(cons var relation) decl])
              (hash-set repEnv var
