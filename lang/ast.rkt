@@ -176,10 +176,16 @@
 (define univ (node/expr/constant 1 'univ))
 (define iden (node/expr/constant 2 'iden))
 
-
 ;; FORMULAS --------------------------------------------------------------------
 
 (struct node/formula () #:transparent)
+
+;; -- constants ----------------------------------------------------------------
+
+(struct node/formula/constant node/formula (value)
+  #:transparent)
+(define true (node/formula/constant #t))
+(define false (node/formula/constant #f))
 
 ;; -- operators ----------------------------------------------------------------
 
