@@ -3,15 +3,14 @@
 (require (prefix-in $ racket))
 (require rosette/base/core/term rosette/base/core/bool)
 
+(provide (all-defined-out))
+
 (struct factory (next) #:mutable)
-(struct translator (factory cache clauses) #:mutable #:transparent)
+(struct translator (factory cache) #:mutable #:transparent)
 (struct boolean/value (label) #:transparent)
 (struct boolean/&& boolean/value () #:transparent)
 (struct boolean/|| boolean/value () #:transparent)
 (struct boolean/! boolean/value () #:transparent)
-
-(define (hash-formula formula)
-  ($eq-hash-code formula))
 
 (define (make-factory) (factory 1))
 (define (factory-next! factory)
@@ -20,7 +19,7 @@
   ret)
 
 (define (make-translator)
-  (translator (make-factory) (make-hash) empty))
+  (translator (make-factory) (make-hash)))
 (define (translator-ref T formula)
   ($hash-ref (translator-cache T) formula))
 (define (translator-set! T formula val)
@@ -29,60 +28,68 @@
   ($hash-has-key? (translator-cache T) formula))
 (define (translator-next! T)
   (factory-next! (translator-factory T)))
-(define (add-clause! T clause)
-  (set-translator-clauses! T (cons clause (translator-clauses T))))
-(define (add-clauses! T clauses)
-  (set-translator-clauses! T (append clauses (translator-clauses T))))
 
-(define-symbolic* a b boolean?)
-(define formula
-  (=> a (|| (! a) b)))
+(define (cache-clause! cache val clause)
+  (define old-clauses (hash-ref! cache val empty))
+  (hash-set! cache val (cons clause old-clauses)))
+(define (cache-clauses! cache val clauses)
+  (define old-clauses (hash-ref! cache val empty))
+  (hash-set! cache val (append clauses old-clauses)))
 
-(define (visit T formula)
+(define (clauses/|| arg-labels label)
+  (cons
+   (cons (- label) (for/list ([arg-label arg-labels]) arg-label))
+   (for/list ([arg-label arg-labels]) (list (- arg-label) label))))
+
+(define (clauses/&& arg-labels label)
+  (cons
+   (cons label (for/list ([arg-label arg-labels]) (- arg-label)))
+   (for/list ([arg-label arg-labels]) (list arg-label (- label)))))
+
+(define (visit T formula cache)
   (match formula
     [(expression (== @||) args ...)
      (unless (translator-cached? T formula)
-       (define arg-vals
-         (map (compose boolean/value-label (curry visit T)) args))
-       (define val (boolean/&& (translator-next! T)))
-       (define label (boolean/value-label val))
-       (define clauses
-         (cons
-          (cons (- label) (for/list ([arg-val arg-vals]) arg-val))
-          (for/list ([arg-val arg-vals]) (list (- arg-val) label))))
-       (add-clauses! T clauses)
+       (for ([arg args]) (visit T arg cache))
+       (define val (boolean/|| (translator-next! T)))
        (translator-set! T formula val))
+     (when cache
+       (define arg-labels
+         (map (compose boolean/value-label (curry translator-ref T)) args))
+       (define val (translator-ref T formula))
+       (define label (boolean/value-label val))
+       (cache-clauses! cache val (clauses/|| arg-labels label)))
      (translator-ref T formula)]
     [(expression (== @&&) args ...)
      (unless (translator-cached? T formula)
-       (define arg-vals
-         (map (compose boolean/value-label (curry visit T)) args))
+       (for ([arg args]) (visit T arg cache))
        (define val (boolean/&& (translator-next! T)))
-       (define label (boolean/value-label val))
-       (define clauses
-         (cons
-          (cons label (for/list ([arg-val arg-vals]) (- arg-val)))
-          (for/list ([arg-val arg-vals]) (list arg-val (- label)))))
-       (add-clauses! T clauses)
        (translator-set! T formula val))
+     (when cache
+       (define arg-labels
+         (map (compose boolean/value-label (curry translator-ref T)) args))
+       (define val (translator-ref T formula))
+       (define label (boolean/value-label val))
+       (cache-clauses! cache val (clauses/&& arg-labels label)))
      (translator-ref T formula)]
     [(expression (== @!) a)
      (unless (translator-cached? T formula)
-       (define val (boolean/! (- (boolean/value-label (visit T a)))))
+       (define val (boolean/! (- (boolean/value-label (visit T a cache)))))
        (translator-set! T formula val))
      (translator-ref T formula)]
     [(expression (== @=>) a b)
-     (visit T (|| (! a) b))]
+     (unless (translator-cached? T formula)
+       (define val (visit T (|| (! a) b) cache))
+       (translator-set! T formula val))
+     (translator-ref T formula)]
+    [(expression (== @<=>) a b)
+     (unless (translator-cached? T formula)
+       (define val (visit T (|| (&& a b) (&& (! a) (! b))) cache))
+       (translator-set! T formula val))
+     (translator-ref T formula)]
     [(? constant?)
      (unless (translator-cached? T formula)
        (define val (boolean/value (translator-next! T)))
        (translator-set! T formula val))
      (translator-ref T formula)]
-    [id (raise-argument-error 'visit "boolean formula" formula)]))
-
-(define (translator-assert T formula)
-  (visit T formula)
-  (add-clause! T (list (boolean/value-label (translator-ref T formula)))))
-
-(define T (make-translator))
-(translator-assert T formula)
+    [id (raise-argument-error 'visit "boolean? formula" formula)]))
