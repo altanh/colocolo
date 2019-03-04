@@ -1,5 +1,6 @@
 #lang rosette
 
+(require (prefix-in $ racket))
 (require "translator.rkt")
 
 (provide (all-defined-out))
@@ -21,20 +22,6 @@
           (apply append (hash-values cache))))
   (set-SAT-clauses! SAT (append new-clauses (SAT-clauses SAT))))
 
-(define (read-solution port [model empty])
-  (define line (read-line port 'any))
-  (cond
-    [(eof-object? line) model]
-    [(equal? (string-ref line 0) #\c) (read-solution port model)]
-    [(equal? (string-ref line 0) #\s)
-     (if (equal? (substring line 2) "SATISFIABLE")
-         (read-solution port model)
-         'unsat)]
-    [(equal? (string-ref line 0) #\v)
-     (define next-model
-       (read (open-input-string (string-append "(" (substring line 2) ")"))))
-     (read-solution port (append model next-model))]))
-
 (define (SAT-solve SAT [formulas empty])
   (for ([formula formulas]) (SAT-assert SAT formula))
   (define temp-path (make-temporary-file "colocolo~a.cnf"))
@@ -48,7 +35,28 @@
   (close-input-port pout)
   (close-input-port perr)
   (close-output-port pin)
-  sol)
+  (if sol (make-model SAT sol) (unsat)))
+
+(define (make-model SAT model-list)
+  (sat
+   ($for/hash ([assignment model-list]
+              #:when (lookup-constant (SAT-translator SAT) (abs assignment)))
+     (define key (lookup-constant (SAT-translator SAT) (abs assignment)))
+     (values key (if (< assignment 0) #f #t)))))
+
+(define (read-solution port [model empty])
+  (define line (read-line port 'any))
+  (cond
+    [(eof-object? line) model]
+    [(equal? (string-ref line 0) #\c) (read-solution port model)]
+    [(equal? (string-ref line 0) #\s)
+     (if (equal? (substring line 2) "SATISFIABLE")
+         (read-solution port model)
+         #f)]
+    [(equal? (string-ref line 0) #\v)
+     (define next-model
+       (read (open-input-string (string-append "(" (substring line 2) ")"))))
+     (read-solution port (append model next-model))]))
 
 ; translates the clauses in SAT into DIMACS CNF and writes to port
 (define (SAT-write SAT port)

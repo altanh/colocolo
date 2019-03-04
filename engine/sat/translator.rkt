@@ -6,8 +6,9 @@
 (provide (all-defined-out))
 
 (struct factory (next) #:mutable)
-(struct translator (factory cache) #:mutable #:transparent)
+(struct translator (factory cache constants) #:mutable #:transparent)
 (struct boolean/value (label) #:transparent)
+(struct boolean/var boolean/value () #:transparent)
 (struct boolean/&& boolean/value () #:transparent)
 (struct boolean/|| boolean/value () #:transparent)
 (struct boolean/! boolean/value () #:transparent)
@@ -19,7 +20,7 @@
   ret)
 
 (define (make-translator)
-  (translator (make-factory) (make-hash)))
+  (translator (make-factory) (make-hash) (make-hash)))
 (define (translator-ref T formula)
   ($hash-ref (translator-cache T) formula))
 (define (translator-set! T formula val)
@@ -28,6 +29,8 @@
   ($hash-has-key? (translator-cache T) formula))
 (define (translator-next! T)
   (factory-next! (translator-factory T)))
+(define (lookup-constant T label)
+  (hash-ref (translator-constants T) label #f))
 
 (define (cache-clause! cache val clause)
   (define old-clauses (hash-ref! cache val empty))
@@ -89,7 +92,8 @@
      (translator-ref T formula)]
     [(? constant?)
      (unless (translator-cached? T formula)
-       (define val (boolean/value (translator-next! T)))
-       (translator-set! T formula val))
+       (define label (translator-next! T))
+       (hash-set! (translator-constants T) label formula)
+       (translator-set! T formula (boolean/var label)))
      (translator-ref T formula)]
     [id (raise-argument-error 'visit "boolean? formula" formula)]))
