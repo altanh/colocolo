@@ -48,34 +48,34 @@
       mult
       (skolemize-body formula rep-env -1 non-skolems negated))]))
 
-(define (skolemize-expr-op universe op args)
+(define (skolemize-expr-op formula rep-env skolem-depth non-skolems negated)
   (define (skolemize-children formula)
     (map
      (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated))
      (node/expr/op-children formula)))
-  (match op
+  (match formula
     [(? node/expr/op/+?)
-     (node/expr/+ (skolemize-children formula))]
+     (node/expr/op/+ (skolemize-children formula))]
     [(? node/expr/op/&?)
-     (node/expr/& (skolemize-children formula))]
+     (node/expr/op/& (skolemize-children formula))]
     [(? node/expr/op/-?)
-     (node/expr/- (skolemize-children formula))]
+     (node/expr/op/- (skolemize-children formula))]
     [(? node/expr/op/->?)
-     (node/expr/-> (skolemize-children formula))]
+     (node/expr/op/-> (skolemize-children formula))]
     [(? node/expr/op/~?)
-     (node/expr/~ (skolemize-children formula))]
+     (node/expr/op/~ (skolemize-children formula))]
     [(? node/expr/op/join?)
-     (node/expr/join (skolemize-children formula))]
+     (node/expr/op/join (skolemize-children formula))]
     [(? node/expr/op/^?)
-     (node/expr/^ (skolemize-children formula))]
+     (node/expr/op/^ (skolemize-children formula))]
     [(? node/expr/op/*?)
-     (node/expr/* (skolemize-children formula))]
+     (node/expr/op/* (skolemize-children formula))]
     [(? node/expr/op/<:?)
-     (node/expr/<: (skolemize-children formula))]
+     (node/expr/op/<: (skolemize-children formula))]
     [(? node/expr/op/:>?)
-     (node/expr/:> (skolemize-children formula))]
+     (node/expr/op/:> (skolemize-children formula))]
     [(? node/expr/op/ite?)
-     (node/expr/ite (skolemize-children formula))]))
+     (node/expr/op/ite (skolemize-children formula))]))
 
 (define (skolemize-formula-op formula rep-env skolem-depth non-skolems negated)
   (define (skolemize-children skolem-depth formula)
@@ -90,18 +90,18 @@
        (node/formula/op/=>
         (skolemize-body left rep-env -1 non-skolems #f)
         (skolemize-body right rep-env -1 non-skolems negated)))]
-    [(? node/formula/&&?)
-     (node/formula/&& (skolemize-children
+    [(? node/formula/op/&&?)
+     (node/formula/op/&& (skolemize-children
       (if negated -1 skolem-depth) formula))]
-    [(? node/formula/||?)
-     (node/formula/|| (skolemize-children
+    [(? node/formula/op/||?)
+     (node/formula/op/|| (skolemize-children
       (if negated skolem-depth -1) formula))]
-    [(? node/formula/in?)
-     (node/formula/in (skolemize-children skolem-depth formula))]
-    [(? node/formula/=?)
-     (node/formula/= (skolemize-children skolem-depth formula))]
-    [(? node/formula/!?)
-     (node/formula/! (skolemize-children skolem-depth formula))]))
+    [(? node/formula/op/in?)
+     (node/formula/op/in (skolemize-children skolem-depth formula))]
+    [(? node/formula/op/=?)
+     (node/formula/op/= (skolemize-children skolem-depth formula))]
+    [(? node/formula/op/!?)
+     (node/formula/op/! (skolemize-children skolem-depth formula))]))
 
 (define (skolemize-quantifier quantifier decls f repEnv skolem-depth non-skolems negated)
   (define (skolemize)
