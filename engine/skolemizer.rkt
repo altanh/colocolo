@@ -31,7 +31,7 @@
     ; leaf node -- relation
     [(node/expr/relation arity name)
      (let ([formula (hash-ref rep-env formula formula)])
-               (skolemized (make-immutable-hasheq) (seteq) formula))]
+               (skolemized empty empty formula))]
     ; leaf node constant
     [(node/expr/constant arity type)
      formula]
@@ -55,6 +55,15 @@
       mult
       (skolemize-body formula rep-env -1 non-skolems negated))]))
 
+(define (merge-bags . lists)
+  (for/fold
+   ([acc (car lists)])
+   ([sublist (cdr lists)])
+    (for/fold
+     ([tail acc])
+     ([el sublist])
+      (cons el tail))))
+
 (define (skolemize-expr-op formula rep-env skolem-depth non-skolems negated)
   (define (skolemize-children op formula)
     (let ([children
@@ -62,11 +71,11 @@
             (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated))
             (node/expr/op-children formula))])
       (skolemized
-       (apply hash-union
+       (apply merge-bags
               (map skolemized-bounds children))
-       (apply set-union
+       (apply merge-bags
               (map skolemized-top-skolem-constraints children))
-       (op (node/expr-arity formula) (map (λ (child) (skolemized-formula child)) children)))))
+       (op (node/expr-arity formula) (map skolemized-formula children)))))
   (match formula
     [(? node/expr/op/+?)
      (skolemize-children node/expr/op/+ formula)]
@@ -94,11 +103,11 @@
 (define (skolemize-formula-op formula rep-env skolem-depth non-skolems negated)
   (define (merge op children)
     (skolemized
-       (apply hash-union
+       (apply merge-bags
               (map skolemized-bounds children))
-       (apply set-union
+       (apply merge-bags
               (map skolemized-top-skolem-constraints children))
-       (op (map (λ (child) (skolemized-formula child)) children))))
+       (op (map skolemized-formula children))))
   (define (skolemize-children op formula skolem-depth)
     (let ([children
            (map
@@ -146,12 +155,14 @@
          (for/fold
           ([new-bounds (skolemized-bounds formula-skolemized)])
           ([skolem skolems])
-           (hash-set new-bounds
-                     (skolem-relation skolem)
-                     (skolem-upper-bound skolem)))
-         (set-union
-                (skolemized-top-skolem-constraints formula-skolemized)
-                (list->seteq (map (λ (skolem) (skolem-domain-constraint skolem)) skolems)))
+           (cons (cons
+                  (skolem-relation skolem)
+                  (skolem-upper-bound skolem))
+                 new-bounds))
+         (for/fold
+          ([new-constraints (skolemized-top-skolem-constraints formula-skolemized)])
+          ([domain-constraint (map skolem-domain-constraint skolems)])
+           (cons domain-constraint new-constraints))
          ((if (equal? 'all quantifier) -> &&)
           (apply && (map skolem-range-constraint skolems))
           (skolemized-formula formula-skolemized))))))
