@@ -143,7 +143,7 @@
     ; add domain constraints to top-skolem-constraints
     (let ([skolems
            (map (curryr create-skolem non-skolems) decls)])
-      (let ([rep-env
+      (let* ([rep-env
              (for/fold
               ([rep-env rep-env])
               ([decl (map car decls)]
@@ -196,7 +196,7 @@
 (define (create-skolem decl non-skolems)
   (match-let
       ([(cons decl-var decl-expr) decl])
-    (let* ([relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)))]
+    (let* ([relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)) "r$")]
            [expr (foldl (lambda (non-skolem expr)
                           (join (car non-skolem) expr)) relation non-skolems)]
            [upper-bound
