@@ -116,7 +116,7 @@
       (merge op children)))
     (match formula
     [(? node/formula/op/=>?)
-     (let* ([args (node/expr/op-children formula)]
+     (let* ([args (node/formula/op-children formula)]
             [left (car args)]
             [right (cadr args)])
        (merge node/formula/op/=>
@@ -196,7 +196,8 @@
 (define (create-skolem decl non-skolems)
   (match-let
       ([(cons decl-var decl-expr) decl])
-    (let* ([relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)) "r$")]
+    (let* ([skolem-name (format "~a*" (relation-name decl-var))]
+           [relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)) skolem-name)]
            [expr (foldl (lambda (non-skolem expr)
                           (join (car non-skolem) expr)) relation non-skolems)]
            [upper-bound

@@ -102,6 +102,9 @@
 
 (define-expr-op ~ get-first #:min-length 1 #:max-length 1 #:arity 2)
 
+; relational override
+(define-expr-op ++ get-first #:same-arity? #t)
+
 (define join-arity
   (lambda e (@- (apply @+ e) (@* 2 (@- (length e) 1)))))
 (define-syntax-rule (define-op/join id)

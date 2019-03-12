@@ -50,6 +50,16 @@
   (for*/all ([A (matrix-entries A)][B (matrix-entries B)])
     (matrix (for*/list ([a (in-list A)][b (in-list B)]) (and a b)))))
 
+(define (matrix/override universe A B)
+  (for*/all ([A (matrix-entries A)][B (matrix-entries B)])
+    (let ([row-len ($quotient (length B) (universe-size universe))])
+      (matrix
+       (for/list ([(a i) (in-indexed A)][b (in-list B)])
+         (let* ([row-start ($* ($quotient i row-len) row-len)]
+                [row-end ($+ row-start row-len)]
+                [row (for/list ([idx (in-range row-start row-end)]) (list-ref B idx))])
+           (|| b (&& a (! (apply || row))))))))))
+
 (define (matrix/transpose universe A)
   (for/all ([A (matrix-entries A)])
     (let* ([univSize (universe-size universe)])
