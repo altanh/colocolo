@@ -35,6 +35,10 @@
 
     \section{Ocelot}
 
+    Ocelot is an embedding of relational logic, including most of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state cite \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Z3).
+
+    Colocolo extends Ocelot to include these two optimizations. They are implemented based on reference implementations from KodKod, the current backend for Alloy.
+
     \section{Skolemization}
 
     To distinguish between the syntax of quantifiers and their semantics we introduce two new terms:\\
@@ -135,5 +139,32 @@
     \section{Benchmarks}
 
     \subsection{Meow: Compiling Kodkod to Ocelot}
+
+    \begin{thebibliography}{999}
+        \bibitem{torlak07}
+          Torlak, Emina and Jackson, Daniel:
+          \emph{Kodkod: A Relational Model Finder},
+          Proceedings of the 13th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS'07).
+        \bibitem{bornholdt17}
+          Bornholdt, James and Torlak, Emina:
+          \emph{Synthesizing Memory Models from Framework Sketches and Litmus Tests},
+          Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI'17).
+        \bibitem{claessen03}
+          Claessen, Koen and S{\"o}rensson:
+          \emph{New Techniques that Improve {MACE}-style Model Finding}
+          Proceedings of Workshop on Model Computation (MODEL'03).
+        \bibitem{aloul03}
+          Aloul, Fadi A. and Sakallah, Karem A. and Markov, Igor L.:
+          \emph{Efficient Symmetry Breaking for Boolean Satisfiability}
+          Proceedings of the 18th International Joint Conference on Artificial Intelligence, (IJCAI'03).
+        \bibitem{andersen97}
+          Andersen, H.R. and Hulgaard, H.:
+          \emph{Boolean expression diagrams}
+          (LICS'97).
+        \bibitem{abdulla00}
+          Abdulla, P.A., Bjesse, P and Een, N.:
+          \emph{Symbolic reachability analysis based on sat-solvers}
+          (TACAS'00).
+      \end{thebibliography}
   \end{document}
  
