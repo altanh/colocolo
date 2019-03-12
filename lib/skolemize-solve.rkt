@@ -12,13 +12,8 @@
 (define (calculate-bound-tuple bnds new-bound)
   (match new-bound
     [(node/expr/op/-> arity children)
-     (pretty-print children)
-     (define mapped (map (curry get-upper-bound bnds) children))
-     (pretty-print mapped)
-     (define ret (apply cartesian-product mapped))
-     (define ret2 (map (curry apply append) ret))
-     (pretty-print ret2)
-     ret2]
+     (define upper-bounds (map (curry get-upper-bound bnds) children))
+     (map (curry apply append) (apply cartesian-product upper-bounds))]
     [(node/expr/relation name r)
      (get-upper-bound bnds new-bound)]
     [_ (raise-argument-error
@@ -38,5 +33,4 @@
                 (car pair)
                 (calculate-bound-tuple bnds (cdr pair))))
              (skolemized-bounds formula-skolemized))))])
-    (pretty-print (skolemized-bounds formula-skolemized))
     (cons (skolemized-formula formula-skolemized) skolem-bnds)))

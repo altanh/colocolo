@@ -64,6 +64,8 @@
      (matrix/nary-op universe matrix/difference args)]
     [(? node/expr/op/->?)
      (matrix/nary-op universe matrix/cross args)]
+    [(? node/expr/op/++?)
+     (matrix/nary-op universe matrix/override args)]
     [(? node/expr/op/~?)
      (matrix/transpose universe (car args))]
     [(? node/expr/op/join?)
