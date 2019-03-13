@@ -13,6 +13,15 @@
 (define (make-SAT)
   (SAT (make-translator) empty #f))
 
+(define (merge-bags . lists)
+  (for/fold
+   ([acc (car lists)])
+   ([sublist (cdr lists)])
+    (for/fold
+     ([tail acc])
+     ([el sublist])
+      (cons el tail))))
+
 (define (SAT-assert SAT formula)
   (cond
     [($equal? formula #t) (void)] ; do nothing
@@ -20,11 +29,11 @@
     [else
      (define cache (make-hash))
      (define root-value
-       (visit (SAT-translator SAT) formula cache))
+       (time (visit (SAT-translator SAT) formula cache)))
      (define new-clauses
        (cons (list (boolean/value-label root-value))
-             (apply append (hash-values cache))))
-     (set-SAT-clauses! SAT (append new-clauses (SAT-clauses SAT)))]))
+             (apply merge-bags (hash-values cache))))
+     (set-SAT-clauses! SAT (merge-bags new-clauses (SAT-clauses SAT)))]))
 
 (define (SAT-clear! SAT)
   (set-SAT-unsat?! SAT #f)

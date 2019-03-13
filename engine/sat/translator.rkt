@@ -9,8 +9,8 @@
 (struct translator (factory cache constants) #:mutable #:transparent)
 (struct boolean/value (label) #:transparent)
 (struct boolean/var boolean/value () #:transparent)
-(struct boolean/&& boolean/value () #:transparent)
-(struct boolean/|| boolean/value () #:transparent)
+(struct boolean/&& boolean/value (clauses) #:transparent)
+(struct boolean/|| boolean/value (clauses) #:transparent)
 (struct boolean/! boolean/value () #:transparent)
 
 (define (make-factory) (factory 1))
@@ -53,27 +53,27 @@
   (match formula
     [(expression (== @||) args ...)
      (unless (translator-cached? T formula)
-       (for ([arg args]) (visit T arg cache))
-       (define val (boolean/|| (translator-next! T)))
+       (define arg-labels
+         (for/list ([arg args]) (boolean/value-label (visit T arg cache))))
+       (define label (translator-next! T))
+       (define clauses (clauses/|| arg-labels label))
+       (define val (boolean/|| label clauses))
        (translator-set! T formula val))
      (when cache
-       (define arg-labels
-         (map (compose boolean/value-label (curry translator-ref T)) args))
        (define val (translator-ref T formula))
-       (define label (boolean/value-label val))
-       (cache-clauses! cache val (clauses/|| arg-labels label)))
+       (cache-clauses! cache val (boolean/||-clauses val)))
      (translator-ref T formula)]
     [(expression (== @&&) args ...)
      (unless (translator-cached? T formula)
-       (for ([arg args]) (visit T arg cache))
-       (define val (boolean/&& (translator-next! T)))
+       (define arg-labels
+         (for/list ([arg args]) (boolean/value-label (visit T arg cache))))
+       (define label (translator-next! T))
+       (define clauses (clauses/&& arg-labels label))
+       (define val (boolean/&& label clauses))
        (translator-set! T formula val))
      (when cache
-       (define arg-labels
-         (map (compose boolean/value-label (curry translator-ref T)) args))
        (define val (translator-ref T formula))
-       (define label (boolean/value-label val))
-       (cache-clauses! cache val (clauses/&& arg-labels label)))
+       (cache-clauses! cache val (boolean/&&-clauses val)))
      (translator-ref T formula)]
     [(expression (== @!) a)
      (unless (translator-cached? T formula)
