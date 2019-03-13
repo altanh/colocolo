@@ -43,7 +43,7 @@
        (skolemized empty empty formula))]
     ; leaf node constant
     [(node/expr/constant arity type)
-     formula]
+     (skolemized empty empty formula)]
     [(node/expr/comprehension arity decls f)
      (lookup formula
              (thunk (let ([rep-env
@@ -57,22 +57,29 @@
                        decls
                        (skolemize-body formula rep-env -1 non-skolems negated cache))))
              cache)]
+    [(node/formula/constant _)
+     (skolemized empty empty formula)]
     [(node/formula/op _)
      (lookup formula
              (thunk
               (skolemize-formula-op formula rep-env skolem-depth non-skolems negated cache))
              cache)]
-[(node/formula/quantified quantifier decls f)
- (lookup formula
-         (thunk
-          (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated cache))
-         cache)]
-[(node/formula/multiplicity mult expr)
- (lookup formula
-         (thunk (node/formula/multiplicity
-                 mult
-                 (skolemize-body formula rep-env -1 non-skolems negated cache)))
-         cache)]))
+    [(node/formula/quantified quantifier decls f)
+     (lookup formula
+             (thunk
+              (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated cache))
+             cache)]
+    [(node/formula/multiplicity mult expr)
+     (lookup formula
+             (thunk
+              (let ([expr-skolemized (skolemize-body expr rep-env -1 non-skolems negated cache)])
+                (struct-copy
+                 skolemized
+                 expr-skolemized
+                 [formula (node/formula/multiplicity
+                           mult
+                           (skolemized-formula expr-skolemized))])))
+             cache)]))
 
 (define (merge-bags . lists)
   (for/fold
