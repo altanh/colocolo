@@ -1,5 +1,5 @@
 #lang rosette
-(require "../../ocelot.rkt" "../../lang/ast.rkt" "../../engine/interpretation.rkt" "../../lang/bounds.rkt" "../../engine/sat/solver.rkt" "../../lib/skolemize-solve.rkt")
+(require "../../ocelot.rkt" "../../lang/ast.rkt" "../../engine/interpretation.rkt" "../../lang/bounds.rkt" "../../engine/sat/solver.rkt" "../../lib/skolemize-solve.rkt" "../../engine/symmetry.rkt")
 (define universe$0 (universe (list "goal" "a0" "a1" "a2" "a3" "a4")))
 (define r$1 (declare-relation 1 "b"))
 (define v$9 (declare-relation 1 "A"))
