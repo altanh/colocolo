@@ -224,18 +224,24 @@
       ([(cons decl-var decl-expr) decl])
     (let* ([skolem-name (format "~a*" (relation-name decl-var))]
            [relation (declare-relation (+ (relation-arity decl-var) (length non-skolems)) skolem-name)]
-           [expr (foldl (lambda (non-skolem expr)
-                          (join (car non-skolem) expr)) relation non-skolems)]
+           [expr (if (> (length non-skolems) 0)
+                     (foldl (lambda (non-skolem expr)
+                          (join (car non-skolem) expr)) relation non-skolems)
+                     relation)]
            [upper-bound
             ; TODO: append decl-expr?
-            (-> (if (> (length non-skolems) 1)
+            (if (> (length non-skolems) 0)
+             (-> (if (> (length non-skolems) 1)
                     (apply -> (map cdr non-skolems))
                     (cdar non-skolems))
-                decl-expr)]
+                decl-expr)
+             decl-expr)]
            [domain-constraint
-            (in
-             (apply join relation (make-list (relation-arity decl-var) univ))
-             (comprehension non-skolems true))]
+            (if (> (length non-skolems) 0)
+                (in
+                 (apply join relation (make-list (relation-arity decl-var) univ))
+                 (comprehension non-skolems true))
+                true)]
            [range-constraints (&& (in expr decl-expr) (one expr))])
       (skolem relation expr upper-bound domain-constraint range-constraints))))
 
