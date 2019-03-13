@@ -19,9 +19,9 @@
 \usepackage{listings}
 
 \theoremstyle{definition}
-\newtheorem{definition}{Definition}[subsection]
+\newtheorem{definition}{Definition}[section]
 \newtheorem{theorem}{Theorem}[section]
-\title{Let's sk*lemize some f\%rmula\$!}
+\title{Colocolo\\\large Optimizations on Ocelot \\ A Racket backend for Alloy}
 \date{February 2019}
 \author{Thomas Bernardi, Altan Haan}
 
@@ -33,23 +33,46 @@
 		\textit{Everything is a lie, nothing is real.} \\
     \end{center}
 
-    \section{What is Skolemization?}
+    \section{Ocelot}
 
-    Skolemization is a process whomst'd've allows us to remove (semantically) existential quantifiers, and replace existentially quantified variables with functions, or relations in the case of alloy. Skolemization relies on a key second order equivalence:
+    Ocelot is an embedding of relational logic, including most of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state cite \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Z3).
 
-    $$\forall x \exists y~.~P(x, y) \Leftrightarrow \exists f \forall x~.~P(x, f(x))$$
+    Colocolo extends Ocelot to include these two optimizations. They are implemented based on reference implementations from KodKod, the current backend for Alloy.
 
-    where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively we are translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ was free, so we can drop the exists and reason about the satisfiability of the formula.
+    \section{Skolemization}
 
-    Neat.
+    To distinguish between the syntax of quantifiers and their semantics we introduce two new terms:\\
+    \theoremstyle{definition}
+    \begin{definition}{Weak quantifier}
+        A \textbf{weak quantifier} is one that \emph{semantically} acts as an existential quantifier (i.e. $\exists$ and $\neg \forall$).
+    \end{definition}
 
-    \section{How does skolemize?}
+    \begin{definition}{Strong quantifier}
+        A \textbf{weak quantifier} is one that \emph{semantically} acts as an existential quantifier (i.e. $\forall$ and $\neg \exists$).
+    \end{definition}
 
-    Skolemization in alloy/kodkod is a tricky beast. Note when we say ``existential quantifiers'' we are talking about this in the semantic sense: ``$\exists$'' and ``$\neg\forall$''---the same holds for ``universal quantifiers'': ``$\forall$'' and ``$\neg \exists$.''
+    Skolemization is a transformation that moves weak quantifiers to the highest syntactic level by replacing weakly quantified variables with functions (or relations in the case of alloy). Skolemization relies on a key second order equivalence:
 
-    At it's core skolemization is very simple: as we descend the AST, we keep track of in-scope variables $S_\forall$ that are universally quantified. When we hit an existentially quantified variable $v$, we create a function $f$ from the variables in $S_\forall$ to $v$, replace every occurrence of $v$ with $f$ in every subformula, and return the expression with the quantifier removed. Unfortunately it is not quite this simple...
+    \begin{equation} \label{eqv1}
+        \forall x \exists y~.~P(x, y) \Leftrightarrow \exists f \forall x~.~P(x, f(x))
+    \end{equation}
 
-    \subsection{Some vocabularies:}
+    where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively this is translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ is a variable sent to the solver.
+
+    In the case of bounded model checking (in both KodKod and Ocelot), this significantly reduces formula size. Suppose we have the universe $\{A_1, \dots, A_n\}$. Considering the formula from our equivalence \ref{eqv1}, $\forall x \exists y~.~P(x,y)$ would get translated as follows:
+
+    Without skolemization:
+    \begin{equation} \label{woskolem}
+        \bigwedge_{i=1}^n\bigvee_{j=1}^n P(A_i, A_j)
+    \end{equation}
+
+    With skolemization:
+
+    \begin{equation} \label{woskolem}
+        \bigwedge_{i=1}^nP(A_i, f(A_i))
+    \end{equation}
+
+    \subsection{The Algorithm}
 
     \theoremstyle{definition}
     \begin{definition}{Declaration}
@@ -63,9 +86,7 @@
         \end{center}
     \end{definition}
 
-    \subsection{The gritty nitty details}
-
-    An existential quantifier will bring one or more variables into scope with one or more \textbf{declarations}. For each of these \textbf{declarations} $d := v~:~m~R$, we must do the following:
+    An weak quantifier extends the current scope with new bindings as defined in its \textbf{declarations}. For each of these \textbf{declarations} $d := v~:~m~R$, skolemization does the following:
 
     Assume $S_\forall$ is a list of all universally quantified variables that are currently in scope.
 
@@ -87,7 +108,7 @@
     \end{align*}
 
     \subsubsection*{Upper Bound}
-    Some FOL2BOOL magic.
+    At the moment, Colocolo assumes all quantified variables will be quantified over sets. This way, the upper bound of the \textbf{skolem relation} is simply the cross product of the upper bound of each element in the relation.
 
     \subsubsection*{Domain Constraints}
 
@@ -113,5 +134,37 @@
     Expanding this out, we get
     \[\textsf{R}_y .\bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{some}\: A \mid \top\} \land (x.\textsf{R}_y ~ \texttt{in}~\texttt{some}~B) \land P(x, x.\textsf{R}_y).\]
 
+    \section{Reduction to Sat}
+
+    \section{Benchmarks}
+
+    \subsection{Meow: Compiling Kodkod to Ocelot}
+
+    \begin{thebibliography}{999}
+        \bibitem{torlak07}
+          Torlak, Emina and Jackson, Daniel:
+          \emph{Kodkod: A Relational Model Finder},
+          Proceedings of the 13th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS'07).
+        \bibitem{bornholdt17}
+          Bornholdt, James and Torlak, Emina:
+          \emph{Synthesizing Memory Models from Framework Sketches and Litmus Tests},
+          Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI'17).
+        \bibitem{claessen03}
+          Claessen, Koen and S{\"o}rensson:
+          \emph{New Techniques that Improve {MACE}-style Model Finding}
+          Proceedings of Workshop on Model Computation (MODEL'03).
+        \bibitem{aloul03}
+          Aloul, Fadi A. and Sakallah, Karem A. and Markov, Igor L.:
+          \emph{Efficient Symmetry Breaking for Boolean Satisfiability}
+          Proceedings of the 18th International Joint Conference on Artificial Intelligence, (IJCAI'03).
+        \bibitem{andersen97}
+          Andersen, H.R. and Hulgaard, H.:
+          \emph{Boolean expression diagrams}
+          (LICS'97).
+        \bibitem{abdulla00}
+          Abdulla, P.A., Bjesse, P and Een, N.:
+          \emph{Symbolic reachability analysis based on sat-solvers}
+          (TACAS'00).
+      \end{thebibliography}
   \end{document}
  

@@ -20,40 +20,59 @@
 
 (struct skolem (relation expr upper-bound domain-constraint range-constraint)
   #:transparent)
+
+(define (lookup f f-thunk cache)
+  ($if cache
+       (hash-ref! cache f f-thunk)
+       (f-thunk)))
 ; probably will have to pass back up the bounds created for the skolems
 ; TODO : add relations argument to check if referenced relation in universe?
 ; TODO : use cache
 ; node -> relation? relation? hash -> int -> decl? list -> bool? -> node
-(define (skolemize-body formula rep-env skolem-depth non-skolems negated)
-   (match formula
+(define (skolemize-body formula rep-env skolem-depth non-skolems negated cache)
+  (match formula
     [(node/expr/op _ _)
-     (skolemize-expr-op formula rep-env skolem-depth non-skolems negated)]
+     (lookup formula
+             (thunk
+              (skolemize-expr-op formula rep-env skolem-depth non-skolems negated cache))
+             cache)]
     ; leaf node -- relation
     [(node/expr/relation arity name)
-     (let ([formula (hash-ref rep-env formula formula)])
-               (skolemized empty empty formula))]
+     (let ([formula (let ([found (assoc formula rep-env)])
+                      (or (and found (cdr found)) formula))])
+       (skolemized empty empty formula))]
     ; leaf node constant
     [(node/expr/constant arity type)
      formula]
     [(node/expr/comprehension arity decls f)
-     (let ([rep-env
-            (for/fold
-             ([acc rep-env])
-             ([decl-var (map car decls)])
-              (hash-set acc decl-var decl-var))])
-       (node/expr/comprehension
-        arity
-        ; TODO: replace skolemized variables in decl-exprs?
-        decls
-        (skolemize-body formula rep-env -1 non-skolems negated)))]
+     (lookup formula
+             (thunk (let ([rep-env
+                           (for/fold
+                            ([acc rep-env])
+                            ([decl-var (map car decls)])
+                             (cons (cons decl-var decl-var) acc))])
+                      (node/expr/comprehension
+                       arity
+                       ; TODO: replace skolemized variables in decl-exprs?
+                       decls
+                       (skolemize-body formula rep-env -1 non-skolems negated cache))))
+             cache)]
     [(node/formula/op _)
-     (skolemize-formula-op formula rep-env skolem-depth non-skolems negated)]
-    [(node/formula/quantified quantifier decls f)
-       (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated)]
-    [(node/formula/multiplicity mult expr)
-     (node/formula/multiplicity
-      mult
-      (skolemize-body formula rep-env -1 non-skolems negated))]))
+     (lookup formula
+             (thunk
+              (skolemize-formula-op formula rep-env skolem-depth non-skolems negated cache))
+             cache)]
+[(node/formula/quantified quantifier decls f)
+ (lookup formula
+         (thunk
+          (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated cache))
+         cache)]
+[(node/formula/multiplicity mult expr)
+ (lookup formula
+         (thunk (node/formula/multiplicity
+                 mult
+                 (skolemize-body formula rep-env -1 non-skolems negated cache)))
+         cache)]))
 
 (define (merge-bags . lists)
   (for/fold
@@ -64,11 +83,11 @@
      ([el sublist])
       (cons el tail))))
 
-(define (skolemize-expr-op formula rep-env skolem-depth non-skolems negated)
+(define (skolemize-expr-op formula rep-env skolem-depth non-skolems negated cache)
   (define (skolemize-children op formula)
     (let ([children
            (map
-            (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated))
+            (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated cache))
             (node/expr/op-children formula))])
       (skolemized
        (apply merge-bags
@@ -100,28 +119,28 @@
     [(? node/expr/op/ite?)
      (skolemize-children node/expr/op/ite formula)]))
 
-(define (skolemize-formula-op formula rep-env skolem-depth non-skolems negated)
+(define (skolemize-formula-op formula rep-env skolem-depth non-skolems negated cache)
   (define (merge op children)
     (skolemized
-       (apply merge-bags
-              (map skolemized-bounds children))
-       (apply merge-bags
-              (map skolemized-top-skolem-constraints children))
-       (op (map skolemized-formula children))))
+     (apply merge-bags
+            (map skolemized-bounds children))
+     (apply merge-bags
+            (map skolemized-top-skolem-constraints children))
+     (op (map skolemized-formula children))))
   (define (skolemize-children op formula skolem-depth)
     (let ([children
            (map
-            (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated))
+            (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated cache))
             (node/formula/op-children formula))])
       (merge op children)))
-    (match formula
+  (match formula
     [(? node/formula/op/=>?)
      (let* ([args (node/formula/op-children formula)]
             [left (car args)]
             [right (cadr args)])
        (merge node/formula/op/=>
-         (list (skolemize-body left rep-env -1 non-skolems #f)
-               (skolemize-body right rep-env -1 non-skolems negated))))]
+              (list (skolemize-body left rep-env -1 non-skolems #f cache)
+                    (skolemize-body right rep-env -1 non-skolems negated cache))))]
     [(? node/formula/op/&&?)
      (skolemize-children node/formula/op/&& formula (if negated -1 skolem-depth))]
     [(? node/formula/op/||?)
@@ -133,7 +152,7 @@
     [(? node/formula/op/!?)
      (skolemize-children node/formula/op/! formula skolem-depth)]))
 
-(define (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated)
+(define (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated cache)
   (define (skolemize)
     ; create skolem relation
     ; calculate bounds on skolem relation
@@ -144,13 +163,13 @@
     (let ([skolems
            (map (curryr create-skolem non-skolems) decls)])
       (let* ([rep-env
-             (for/fold
-              ([rep-env rep-env])
-              ([decl (map car decls)]
-               [skolem skolems])
-               (hash-set rep-env decl (skolem-expr skolem)))]
-            [formula-skolemized
-             (skolemize-body f rep-env skolem-depth non-skolems negated)])
+              (for/fold
+               ([rep-env rep-env])
+               ([decl (map car decls)]
+                [skolem skolems])
+                (cons (cons decl (skolem-expr skolem)) rep-env))]
+             [formula-skolemized
+              (skolemize-body f rep-env skolem-depth non-skolems negated cache)])
         (skolemized
          (for/fold
           ([new-bounds (skolemized-bounds formula-skolemized)])
@@ -176,14 +195,14 @@
     (if (< skolem-depth (+ (length non-skolems) (length decls)))
         ; cannot skolemize below due to given skolem depth restriction
         (let
-            ([formula-skolemized (skolemize-body f rep-env -1 non-skolems negated)])
+            ([formula-skolemized (skolemize-body f rep-env -1 non-skolems negated cache)])
           (struct-copy
            skolemized
            formula-skolemized
            [formula (node/formula/quantified quantifier decls (skolemized-formula formula-skolemized))]))
         (let*
             ([non-skolems (append decls non-skolems)]
-             [formula-skolemized (skolemize-body f rep-env (sub1 skolem-depth) non-skolems negated)])
+             [formula-skolemized (skolemize-body f rep-env (sub1 skolem-depth) non-skolems negated cache)])
           (struct-copy
            skolemized
            formula-skolemized
@@ -213,20 +232,6 @@
            [range-constraints (&& (in expr decl-expr) (one expr))])
       (skolem relation expr upper-bound domain-constraint range-constraints))))
 
-(define (skolemize f skolem-depth)
-  (skolemize-body f (make-immutable-hasheq) skolem-depth empty #f))
-
-;(define base-env (make-immutable-hasheq))
-
-;(define decls1 (list (cons (declare-relation 1) (declare-relation 1))))
-
-;(define-sig Platform)
-;(define-sig Man
- ; [ceiling : Platform]
-  ;[floor   : Platform])
-
-;(define (Above m n) (= (join m floor) (join n ceiling)))
-
-;(skolemize (all ([m Man]) (some ([n Man]) (Above n m))) 1)
-
-;(skolemize (all ([m Man]) (some ([n Man]) (Above m n))) 1)
+(define (skolemize f skolem-depth cache?)
+  (skolemize-body f empty skolem-depth empty #f
+                  (if cache? (make-hash) #f)))
