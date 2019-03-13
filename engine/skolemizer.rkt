@@ -38,7 +38,8 @@
              cache)]
     ; leaf node -- relation
     [(node/expr/relation arity name)
-     (let ([formula (hash-ref rep-env formula formula)])
+     (let ([formula (let ([found (assoc formula rep-env)])
+                      (or (and found (cdr found)) formula))])
        (skolemized empty empty formula))]
     ; leaf node constant
     [(node/expr/constant arity type)
@@ -49,7 +50,7 @@
                            (for/fold
                             ([acc rep-env])
                             ([decl-var (map car decls)])
-                             (hash-set acc decl-var decl-var))])
+                             (cons (cons decl-var decl-var) acc))])
                       (node/expr/comprehension
                        arity
                        ; TODO: replace skolemized variables in decl-exprs?
@@ -166,7 +167,7 @@
                ([rep-env rep-env])
                ([decl (map car decls)]
                 [skolem skolems])
-                (hash-set rep-env decl (skolem-expr skolem)))]
+                (cons (cons decl (skolem-expr skolem)) rep-env))]
              [formula-skolemized
               (skolemize-body f rep-env skolem-depth non-skolems negated cache)])
         (skolemized
@@ -232,5 +233,5 @@
       (skolem relation expr upper-bound domain-constraint range-constraints))))
 
 (define (skolemize f skolem-depth cache?)
-  (skolemize-body f (make-immutable-hasheq) skolem-depth empty #f
+  (skolemize-body f empty skolem-depth empty #f
                   (if cache? (make-hash) #f)))
