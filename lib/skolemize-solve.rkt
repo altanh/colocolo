@@ -21,7 +21,7 @@
         "cross product or relation" new-bound)]))
 
 (define (skolemize-merge bnds formula skolem-depth)
-  (let* ([formula-skolemized (skolemize formula skolem-depth)]
+  (let* ([formula-skolemized (skolemize formula skolem-depth #t)]
          [skolem-bnds
           (bounds-union
            bnds
@@ -33,4 +33,5 @@
                 (car pair)
                 (calculate-bound-tuple bnds (cdr pair))))
              (skolemized-bounds formula-skolemized))))])
-    (cons (skolemized-formula formula-skolemized) skolem-bnds)))
+    (begin (pretty-print (skolemized-formula formula-skolemized))
+    (cons (skolemized-formula formula-skolemized) skolem-bnds))))
