@@ -42,7 +42,8 @@
        (interpret-quantifier universe relations quantifier decls* f cache))]
     [(node/formula/multiplicity mult expr)
      (let ([expr* (interpret-rec expr universe relations cache)])
-       (interpret-multiplicity universe mult expr*))]))
+       (interpret-multiplicity universe mult expr*))]
+    [(node/formula/constant value) value]))
 
 
 (define (interpret-constant universe type)
@@ -52,7 +53,6 @@
     ['iden (let ([size (universe-size universe)])
              (matrix (for*/list ([i (in-range size)][j (in-range size)])
                        (= i j))))]))
-
 
 (define (interpret-expr-op universe op args)
   (match op
@@ -64,8 +64,8 @@
      (matrix/nary-op universe matrix/difference args)]
     [(? node/expr/op/->?)
      (matrix/nary-op universe matrix/cross args)]
-    [(? node/expr/op/++?)
-     (matrix/nary-op universe matrix/override args)]
+    #|[(? node/expr/op/++?)
+     (matrix/nary-op universe matrix/override args)]|#
     [(? node/expr/op/~?)
      (matrix/transpose universe (car args))]
     [(? node/expr/op/join?)
