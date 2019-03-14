@@ -1,0 +1,3 @@
+#!/bin/bash
+for i in */*.rkt; do printf "\n$i\n" && racket "$i"; done > "$1"
+python process.py "$1"

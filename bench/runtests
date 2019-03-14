@@ -1,0 +1,2 @@
+#!/bin/bash
+for i in */*.rkt; do printf "\n$i\n" && racket "$i"; done
