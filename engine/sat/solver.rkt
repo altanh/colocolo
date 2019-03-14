@@ -6,7 +6,7 @@
 (provide (all-defined-out))
 
 (define solver-path "")
-(define solver-args "-q")
+(define solver-args "-q -T 30")
 
 (struct SAT (translator clauses unsat?) #:mutable)
 
@@ -29,7 +29,7 @@
     [else
      (define cache (make-hash))
      (define root-value
-       (time (visit (SAT-translator SAT) formula cache)))
+       (visit (SAT-translator SAT) formula cache))
      (define new-clauses
        (cons (list (boolean/value-label root-value))
              (apply merge-bags (hash-values cache))))
