@@ -1,6 +1,6 @@
 #lang rosette
 
-(require ocelot ocelot/engine/symmetry rackunit)
+(require colocolo colocolo/engine/symmetry rackunit)
 
 ; Test the symmetry breaking predicate generator
 ; using the example in Figure 3-4 here:

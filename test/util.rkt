@@ -1,6 +1,6 @@
 #lang rosette
 
-(require "../ocelot.rkt" 
+(require "../colocolo.rkt" 
          (only-in "../lang/ast.rkt" relation-arity)
          (only-in "../engine/matrix.rkt" matrix-entries matrix? tuple->idx)
          rackunit (prefix-in $ racket))

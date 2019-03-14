@@ -1,8 +1,8 @@
 #lang rosette
 
-(require "../ocelot.rkt" "../engine/symmetry.rkt" "skolemize-solve.rkt"
-         (only-in "../lang/ast.rkt" relation-name relation-arity node/formula?))
-(provide define-sig scope alloy-fact alloy-run alloy-check
+(require colocolo colocolo/engine/symmetry colocolo/lib/skolemize-solve
+         (only-in colocolo/lang/ast relation-name relation-arity node/formula?))
+(provide define-sig scope alloy-fact alloy-run alloy-check alloy-check-skolem
          clear-alloy-facts! clear-alloy!)
 
 
@@ -84,6 +84,8 @@
   (define skf (skolemize-merge bnds* f* 2))
   (define bnds (cdr skf))
   (define f (car skf))
+  (pretty-print f*)
+  (pretty-print f)
   (define interp (instantiate-bounds bnds))
   (define pre (for/list ([a (alloy-facts)]) (interpret* a interp)))
   (define dom (for/list ([d (alloy-scope-domain scope)]) (interpret* d interp)))
@@ -93,22 +95,26 @@
 
 
 ;; Check a formula
-(define (alloy-check f* scope)
-  (define bnds* (alloy-scope-bounds scope))
-  (define skf (skolemize-merge bnds* f* 2))
-  (define bnds (cdr skf))
-  ;(pretty-print bnds*)
-  (pretty-print bnds)
-  (define f (car skf))
-  (pretty-print f)
-  (pretty-print ((universe-inverse (bounds-universe bnds)) 'Man$0))
+(define (alloy-check f scope)
+  (define bnds (alloy-scope-bounds scope))
   (define interp (instantiate-bounds bnds))
   (define pre (for/list ([a (alloy-facts)]) (interpret* a interp)))
   (define dom (for/list ([d (alloy-scope-domain scope)]) (interpret* d interp)))
-  
   (define post (interpret* f interp))
-  
-  (printf "god\n")
+  (define sbp (generate-sbp interp (alloy-scope-bounds scope)))
+  (unsat? (solve (assert (and sbp (apply && dom) (apply && pre) (not post))))))
+
+(define (alloy-check-skolem f* scope)
+  (define bnds* (alloy-scope-bounds scope))
+  (define skf (skolemize-merge bnds* f* 2))
+  (define bnds (cdr skf))
+  (define f (car skf))
+ ; (pretty-print f*)
+  ;(pretty-print f)
+  (define interp (instantiate-bounds bnds))
+  (define pre (for/list ([a (alloy-facts)]) (interpret* a interp)))
+  (define dom (for/list ([d (alloy-scope-domain scope)]) (interpret* d interp)))
+  (define post (interpret* f interp))
   (define sbp (generate-sbp interp (alloy-scope-bounds scope)))
   (unsat? (solve (assert (and sbp (apply && dom) (apply && pre) (not post))))))
 
@@ -122,24 +128,3 @@
 (define (clear-alloy!)
   (clear-alloy-facts!)
   (sigs '()))
-
-; sig Platform {}
-; sig Man {ceiling, floor: Platform}
-(define-sig Platform)
-(define-sig Man
-  [ceiling : Platform]
-  [floor   : Platform])
-
-; pred Above[m, n: Man] {m.floor = n.ceiling}
-(define (Above m n) (= (join m floor) (join n ceiling)))
-
-; fact PaulSimon {all m: Man | some n: Man | n.Above[m]}
-(define PaulSimon
-  (all ([m Man]) (some ([n Man]) (Above n m))))
-(alloy-fact PaulSimon)
-
-; assert BelowToo { all m: Man | some n: Man | m.Above[n] }
-(define BelowToo (all ([m Man]) (some ([n Man]) (Above m n))))
-
-; check BelowToo for 2 expect 1
-(alloy-check BelowToo (scope 2))

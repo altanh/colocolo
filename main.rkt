@@ -1,5 +1,5 @@
 #lang racket
 
-(require "ocelot.rkt")
+(require "colocolo.rkt")
 
-(provide (all-from-out "ocelot.rkt"))
+(provide (all-from-out "colocolo.rkt"))

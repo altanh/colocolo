@@ -1,6 +1,6 @@
 #lang racket
 
-(require rackunit ocelot/lang/ast ocelot/lib/simplify-solve)
+(require rackunit colocolo/lang/ast colocolo/lib/simplify-solve)
 
 
 ; Some memory model relations that have rich type information:

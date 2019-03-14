@@ -2,40 +2,40 @@
 
 @require[racket/runtime-path racket/require racket/sandbox scribble/eval
          "log.rkt"
-         @for-label[ocelot
+         @for-label[colocolo
                    (only-in rosette term? solve)
                    (only-in rosette/base/core/safe assert)]]
 
 @(define-runtime-path root ".")
 @(define my-eval (make-log-evaluator (logfile root) 'rosette))
-@(my-eval `(require ocelot))
+@(my-eval `(require colocolo))
 
-@title{Ocelot: a solver for relational logic}
+@title{colocolo: a solver for relational logic}
 @author[(author+email "James Bornholt" "bornholt@cs.washington.edu")]
 
-@defmodule[ocelot]
+@defmodule[colocolo]
 
-Ocelot provides an embedding of bounded relational logic in 
+colocolo provides an embedding of bounded relational logic in 
 @link["https://emina.github.io/rosette"]{Rosette},
 a solver-aided programming language.
-Ocelot enables both @(seclink "check" "verification")
+colocolo enables both @(seclink "check" "verification")
 and @(seclink "sketch" "synthesis") of relational logic expressions.
 
-Ocelot's flavor of bounded relational logic draws heavily on
+colocolo's flavor of bounded relational logic draws heavily on
 @link["http://alloy.mit.edu/"]{Alloy},
 so many concepts and examples from Alloy will also help
-in developing Ocelot programs.
+in developing colocolo programs.
 
 @section{Quick Start}
 
-Ocelot is best used with @link["https://emina.github.io/rosette"]{Rosette},
+colocolo is best used with @link["https://emina.github.io/rosette"]{Rosette},
 so your file should begin:
 
 @codeblock|{
   #lang rosette
 }|
 
-Using Ocelot involves first @seclink["spec"]{constructing a relational specification},
+Using colocolo involves first @seclink["spec"]{constructing a relational specification},
 then @seclink["scope"]{defining a scope} in which to check the specification,
 and finally @seclink["check"]{checking properties} within that scope.
 
@@ -74,8 +74,8 @@ The @racket[declare-relation] procedure creates a new relation of a given arity 
 
 @subsubsection{Constraints over relations}
 
-Ocelot offers a similar relational algebra to Alloy.
-Sentences in Ocelot can be either expressions (i.e., return a relation)
+colocolo offers a similar relational algebra to Alloy.
+Sentences in colocolo can be either expressions (i.e., return a relation)
 or formulas (i.e., return a boolean).
 
 @examples[#:eval my-eval
@@ -86,7 +86,7 @@ or formulas (i.e., return a boolean).
 
 @subsection[#:tag "scope"]{Defining bounds on relations}
 
-By default, Ocelot requires explicit bounds on the possible relations.
+By default, colocolo requires explicit bounds on the possible relations.
 A @racket[bound] for a relation consists of two sets of tuples: a lower bound defining tuples that
 must be in a relation, and an upper bound defining tuples that may be in a relation.
 A @racket[bounds] instance is a list of @racket[bound]s together with a universe of discourse.
@@ -104,7 +104,7 @@ Finally, checking a relational specification involves interpreting the specifica
 with respect to the bounds. The result is a Rosette expression,
 which can then be solved as normal.
 
-The Ocelot interpreter translates Ocelot constraints into Rosette constraints
+The colocolo interpreter translates colocolo constraints into Rosette constraints
 with respect to a given bounds.
 
 Solving the generated Rosette constraints with @racket[solve] is similar to Alloy's @tt{run} command,
@@ -130,7 +130,7 @@ TODO
 
 @section{Reference}
 
-Ocelot provides a language for constructing relational formulas,
+colocolo provides a language for constructing relational formulas,
 tools for defining possible values for those formulas,
 and an interpreter to reduce those formulas to Rosette terms.
 
@@ -141,13 +141,13 @@ and an interpreter to reduce those formulas to Rosette terms.
 
 @subsection{Relational Logic}
 
-The Ocelot DSL embeds relational logic in Rosette.
-Many Ocelot operators (e.g., @racket[+]) override their Rosette counterparts to also work
+The colocolo DSL embeds relational logic in Rosette.
+Many colocolo operators (e.g., @racket[+]) override their Rosette counterparts to also work
 over relations declared with @racket[declare-relation].
 These overridden operators should automatically fall back to their Rosette
 counterparts if their arguments are not relations.
 But this behavior can often be subtle, so
-only import the entire @racket[ocelot] module when the enclosing
+only import the entire @racket[colocolo] module when the enclosing
 context will not also be manipulating Rosette expressions.
 
 @subsubsection{Expressions}
@@ -321,7 +321,7 @@ under which the body evaluates to true has the appropriate cardinality.
 
 @subsection{Scopes}
 
-Ocelot interprets relational expressions with respect to a set of bounds,
+colocolo interprets relational expressions with respect to a set of bounds,
 which constrain the possible values of relations.
 The bounds, in turn, consist of tuples drawn from a universe of discourse.
 
@@ -376,7 +376,7 @@ The bounds, in turn, consist of tuples drawn from a universe of discourse.
 
 @subsection{Solving}
 
-Ocelot compiles relational formulas to Rosette constraints,
+colocolo compiles relational formulas to Rosette constraints,
 which can then be used directly with Rosette's solving and verification features.
 
 @defproc[(interpret [formula node/formula?]
@@ -400,7 +400,7 @@ which can then be used directly with Rosette's solving and verification features
 
 @subsubsection{Interpretations}
 
-Ocelot reduces relational formulas to boolean formulas by way of interpretations,
+colocolo reduces relational formulas to boolean formulas by way of interpretations,
 which assign boolean variables for the presence of each possible tuple in a relation.
 Interpretations can be used to list a satisfying model from a Rosette query
 back to the relations that defined the solved formula.

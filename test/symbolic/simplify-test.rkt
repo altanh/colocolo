@@ -2,8 +2,8 @@
 
 (require racket/hash rackunit
          "../util.rkt"
-         ocelot
-         (prefix-in ast/ ocelot/lang/ast))
+         colocolo
+         (prefix-in ast/ colocolo/lang/ast))
 
 (file-stream-buffer-mode (current-output-port) 'none)
 

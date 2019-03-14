@@ -1,6 +1,6 @@
 #lang racket
 
-(require ocelot ocelot/lib/alloy rackunit)
+(require colocolo colocolo/lib/alloy rackunit)
 
 ; declare signatures
 (define-sig Platform)

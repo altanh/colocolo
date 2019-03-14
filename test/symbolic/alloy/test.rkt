@@ -1,6 +1,6 @@
 #lang rosette
 
-(require ocelot/lib/alloy)
+(require colocolo/lib/alloy)
 
 (define (clear!)
   (clear-alloy!)

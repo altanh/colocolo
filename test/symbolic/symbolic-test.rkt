@@ -1,6 +1,6 @@
 #lang rosette
 
-(require "../../ocelot.rkt" "../util.rkt"
+(require "../../colocolo.rkt" "../util.rkt"
          rosette/lib/angelic rosette/lib/synthax
          rackunit rackunit/text-ui)
 
@@ -70,7 +70,7 @@
   )
 
 (define (test-eval)
-  ; Ocelot depends on equality being preserved across evaluate; if this doesn't
+  ; colocolo depends on equality being preserved across evaluate; if this doesn't
   ; hold, then evaluation can be messed up
   (define-symbolic p boolean?)
 

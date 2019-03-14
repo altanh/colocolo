@@ -1,6 +1,6 @@
 #lang racket
 
-(require ocelot ocelot/lib/alloy rackunit)
+(require "../../../colocolo.rkt" "../../../lib/alloy.rkt" rackunit)
 
 ; This file implements the ceilingsAndFloors.als Alloy demo
 ; (found in Alloy's sample models under examples/toys/).
@@ -22,24 +22,28 @@
 (alloy-fact PaulSimon)
 
 ; assert BelowToo { all m: Man | some n: Man | m.Above[n] }
-(define BelowToo (all ([m Man]) (some ([n Man]) (Above m n))))
+(define BelowToo (all ([m Man]) (some ([n Man] [o Man]) (and (Above m n) (Above o n)))))
 
 ; check BelowToo for 2 expect 1
 (check-false
- (alloy-check BelowToo (scope 2)))
+ (time (alloy-check-skolem BelowToo (scope 15))))
+(check-false
+ (time (alloy-check BelowToo (scope 15))))
 
 ; pred Geometry {no m: Man | m.floor = m.ceiling}
 (define Geometry (no ([m Man]) (= (join m floor) (join m ceiling))))
+
+(alloy-fact Geometry)
 
 ; assert BelowToo' { Geometry => (all m: Man | some n: Man | m.Above[n]) }
 (define BelowToo^
   (=> Geometry (all ([m Man]) (some ([n Man]) (Above m n)))))
 
 ; check BelowToo' for 2 expect 0
-(check-true
+#;(check-true
  (alloy-check BelowToo^ (scope 2)))
 ; check BelowToo' for 3 expect 1
-(check-false
+#;(check-false
  (alloy-check BelowToo^ (scope 3)))
 
 ; pred NoSharing {
@@ -51,15 +55,41 @@
            (or (= (join m floor) (join n floor))
                (= (join m ceiling) (join n ceiling))))))
 
+(alloy-fact NoSharing)
+
 ; assert BelowToo'' { NoSharing => (all m: Man | some n: Man | m.Above[n]) }
 (define BelowToo^^
   (=> NoSharing (all ([m Man]) (some ([n Man]) (Above m n)))))
 
+(define BelowTooYeet
+  (=> NoSharing (all ([m Man]) (and (some ([n Man]) (Above m n))
+                                    (some ([l Man]) (Above l m))))))
+
+(define BelowMemes
+  (=> NoSharing (all ([m Man]) (all ([n Man])
+                                    (=> (and (in n m) (in m n))
+                                        (or (some ([f Man])
+                                                  (or
+                                                   (and (Above f m)
+                                                        (Above n f))
+                                                   (and (Above f n)
+                                                        (Above m f))))
+                                            (or (Above m n)
+                                                (Above n m))))))))
+
+(check-false
+ (time (alloy-check-skolem BelowMemes (scope 15))))
+(check-false
+ (time (alloy-check BelowMemes (scope 15))))
+
 ; check BelowToo'' for 6 expect 0
-(check-true
- (time (alloy-check BelowToo^^ (scope 6))))
-(check-true
+#;(check-true
+ (time (alloy-check BelowToo^^ (scope 8))))
+#;(check-true
+ (time (alloy-check-skolem BelowToo^^ (scope 8))))
+#;(check-true
  (time (alloy-check BelowToo^^ (scope 7))))
+
 #|
 (check-true
  (time (alloy-check BelowToo^^ (scope 8))))

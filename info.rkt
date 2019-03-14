@@ -1,6 +1,6 @@
 #lang info
 
-(define collection "ocelot")
+(define collection "colocolo")
 
 (define pkg-desc "A solver for relational logic")
 (define version "0.0.1")
@@ -12,4 +12,4 @@
                "rosette"))
 (define build-deps '("scribble-lib" "racket-doc"))
 
-(define scribblings '(("scribblings/ocelot.scrbl" () (experimental))))
+(define scribblings '(("scribblings/colocolo.scrbl" () (experimental))))
