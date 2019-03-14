@@ -134,7 +134,7 @@
      (apply merge-bags
             (map skolemized-top-skolem-constraints children))
      (op (map skolemized-formula children))))
-  (define (skolemize-children op formula skolem-depth)
+  (define (skolemize-children op formula skolem-depth negated)
     (let ([children
            (map
             (λ (child) (skolemize-body child rep-env skolem-depth non-skolems negated cache))
@@ -144,20 +144,21 @@
     [(? node/formula/op/=>?)
      (let* ([args (node/formula/op-children formula)]
             [left (car args)]
-            [right (cadr args)])
+            [right (cadr args)]
+            [skolem-depth (if negated skolem-depth -1)])
        (merge node/formula/op/=>
-              (list (skolemize-body left rep-env -1 non-skolems #f cache)
-                    (skolemize-body right rep-env -1 non-skolems negated cache))))]
+              (list (skolemize-body left rep-env skolem-depth non-skolems #f cache)
+                    (skolemize-body right rep-env skolem-depth non-skolems negated cache))))]
     [(? node/formula/op/&&?)
-     (skolemize-children node/formula/op/&& formula (if negated -1 skolem-depth))]
+     (skolemize-children node/formula/op/&& formula (if negated -1 skolem-depth) negated)]
     [(? node/formula/op/||?)
-     (skolemize-children node/formula/op/|| formula (if negated skolem-depth -1))]
+     (skolemize-children node/formula/op/|| formula (if negated skolem-depth -1) negated)]
     [(? node/formula/op/in?)
-     (skolemize-children node/formula/op/in formula skolem-depth)]
+     (skolemize-children node/formula/op/in formula skolem-depth negated)]
     [(? node/formula/op/=?)
-     (skolemize-children node/formula/op/= formula skolem-depth)]
+     (skolemize-children node/formula/op/= formula skolem-depth negated)]
     [(? node/formula/op/!?)
-     (skolemize-children node/formula/op/! formula skolem-depth)]))
+     (skolemize-children node/formula/op/! formula skolem-depth (not negated))]))
 
 (define (skolemize-quantifier quantifier decls f rep-env skolem-depth non-skolems negated cache)
   (define (skolemize)
@@ -189,7 +190,7 @@
           ([new-constraints (skolemized-top-skolem-constraints formula-skolemized)])
           ([domain-constraint (map skolem-domain-constraint skolems)])
            (cons domain-constraint new-constraints))
-         ((if (equal? 'all quantifier) -> &&)
+         ((if (equal? 'all quantifier) => &&)
           (apply && (map skolem-range-constraint skolems))
           (skolemized-formula formula-skolemized))))))
   (define (not-skolemize)
