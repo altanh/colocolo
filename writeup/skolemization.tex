@@ -3,7 +3,7 @@
 % HLIN501 Study Guide
 % November 2017
 
-\documentclass{article}
+\documentclass[10pt]{article}
 \usepackage[T1]{fontenc}
 % \usepackage{babel}
 \usepackage[margin=1in]{geometry}
@@ -31,144 +31,168 @@
 	\maketitle
 	\begin{center}	
 		\textit{Everything is a lie, nothing is real.} \\
-    \end{center}
+  \end{center}
 
-    \section{Ocelot}
+  \section{Ocelot}
 
-    Ocelot is an embedding of relational logic, including most of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state cite \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Z3).
+  Ocelot is an embedding of relational logic, including most of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Z3).
 
-    Colocolo extends Ocelot to include these two optimizations. They are implemented based on reference implementations from KodKod, the current backend for Alloy.
+  Colocolo extends Ocelot to include these two optimizations. They are implemented based on reference implementations from KodKod, the current backend for Alloy.
 
-    \section{Skolemization}
+  \section{Skolemization}
 
-    To distinguish between the syntax of quantifiers and their semantics we introduce two new terms:\\
-    \theoremstyle{definition}
-    \begin{definition}{Weak quantifier}
-        A \textbf{weak quantifier} is one that \emph{semantically} acts as an existential quantifier (i.e. $\exists$ and $\neg \forall$).
-    \end{definition}
+  To distinguish between the syntax of quantifiers and their semantics we introduce two new terms:\\
+  \theoremstyle{definition}
+  \begin{definition}[Weak quantifier]
+      A \textbf{weak quantifier} is one that \emph{semantically} acts as an existential quantifier (i.e. $\exists$ and $\neg \forall$).
+  \end{definition}
 
-    \begin{definition}{Strong quantifier}
-        A \textbf{weak quantifier} is one that \emph{semantically} acts as an existential quantifier (i.e. $\forall$ and $\neg \exists$).
-    \end{definition}
+  \begin{definition}[Strong quantifier]
+      A \textbf{strong quantifier} is one that \emph{semantically} acts as an universal quantifier (i.e. $\forall$ and $\neg \exists$).
+  \end{definition}
 
-    Skolemization is a transformation that moves weak quantifiers to the highest syntactic level by replacing weakly quantified variables with functions (or relations in the case of alloy). Skolemization relies on a key second order equivalence:
+  Skolemization is a transformation that moves weak quantifiers to the highest syntactic level by replacing weakly quantified variables with functions (or relations in the case of alloy). Skolemization relies on a key second order equivalence:
 
-    \begin{equation} \label{eqv1}
-        \forall x \exists y~.~P(x, y) \Leftrightarrow \exists f \forall x~.~P(x, f(x))
-    \end{equation}
+  \begin{equation} \label{eqv1}
+      \forall x \exists y~.~P(x, y) \Leftrightarrow \exists f \forall x~.~P(x, f(x))
+  \end{equation}
 
-    where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively this is translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ is a variable sent to the solver.
+  where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively this is translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ is a variable sent to the solver.
 
-    In the case of bounded model checking (in both KodKod and Ocelot), this significantly reduces formula size. Suppose we have the universe $\{A_1, \dots, A_n\}$. Considering the formula from our equivalence \ref{eqv1}, $\forall x \exists y~.~P(x,y)$ would get translated as follows:
+  In the case of bounded model checking (in both KodKod and Ocelot), this significantly reduces formula size. Suppose we have the universe $\{A_1, \dots, A_n\}$. Considering the formula from our equivalence \ref{eqv1}, $\forall x \exists y~.~P(x,y)$ would get translated as follows:
 
-    Without skolemization:
-    \begin{equation} \label{woskolem}
-        \bigwedge_{i=1}^n\bigvee_{j=1}^n P(A_i, A_j)
-    \end{equation}
+  Without skolemization:
+  \begin{equation} \label{woskolem}
+      \bigwedge_{i=1}^n\bigvee_{j=1}^n P(A_i, A_j)
+  \end{equation}
 
-    With skolemization:
+  With skolemization:
 
-    \begin{equation} \label{woskolem}
-        \bigwedge_{i=1}^nP(A_i, f(A_i))
-    \end{equation}
+  \begin{equation} \label{wskolem}
+      \bigwedge_{i=1}^nP(A_i, f(A_i))
+  \end{equation}
 
-    \subsection{The Algorithm}
+  \subsection{The Algorithm}
 
-    \theoremstyle{definition}
-    \begin{definition}{Declaration}
-        A declaration allows us to define variables in terms of other expressions (and all declarations can eventually be traced back to relations in the universe). A declaration contains a \textbf{variable}, a \textbf{multiplicity}, and an \textbf{expression}.
+  \theoremstyle{definition}
+  \begin{definition}{Declaration}
+      A declaration allows us to define variables in terms of other expressions (and all declarations can eventually be traced back to relations in the universe). A declaration contains a \textbf{variable}, a \textbf{multiplicity}, and an \textbf{expression}.
 
-        \begin{center}
-            \begin{tabular}{c c c c}
-                $x$ & : & some & $E$ \\
-                variable & & multiplicity & expression
-            \end{tabular}
-        \end{center}
-    \end{definition}
+      \begin{center}
+          \begin{tabular}{c c c c}
+              $x$ & : & some & $E$ \\
+              variable & & multiplicity & expression
+          \end{tabular}
+      \end{center}
+  \end{definition}
 
-    An weak quantifier extends the current scope with new bindings as defined in its \textbf{declarations}. For each of these \textbf{declarations} $d := v~:~m~R$, skolemization does the following:
+  An weak quantifier extends the current scope with new bindings as defined in its \textbf{declarations}. For each of these \textbf{declarations} $d := v~:~m~R$, skolemization does the following:
 
-    Assume $S_\forall$ is a list of all universally quantified variables that are currently in scope.
+  Assume $S_\forall$ is a list of all strongly quantified variables that are currently in scope.
 
-    \begin{itemize}
-        \item Define the \textbf{skolem relation}, $\textsf{R}_v$ of arity $\text{size}(S_\forall) + \text{arity}(v)$ (every element of $S_\forall$ should be unary).
-        \item Define our \textbf{skolem expression} $\textsf{E}_v$ which will replace every occurrence of $v$ further down the AST.
-        \item Approximate an \textbf{upper bound} for the \textbf{skolem relation}.
-        \item Calculate \textbf{domain constraints} that ensure the ``inputs'' to $\textsf{R}_v$ are constrained in the same way that their corresponding universally quantified variables are---store these, these will be conjuncted with the formula on the way up the AST once there are no more existential quantifiers. Specifically, these constraints encode multiplicity information that relational bounds cannot infer.
-        \item Add \textbf{range constraints} to the formula to ensure that the ``outputs'' of $S$ are constrained in the same way as $v$. Multiplicity information?
-    \end{itemize}
+  \begin{itemize}
+      \item Define the \textbf{skolem relation}, $\textsf{R}_v$ of arity $\text{size}(S_\forall) + \text{arity}(v)$ (every element of $S_\forall$ should be unary).
+      \item Define our \textbf{skolem expression} $\textsf{E}_v$ which will replace every occurrence of $v$ further down the AST.
+      \item Approximate an \textbf{upper bound} for the \textbf{skolem relation}.
+      \item Calculate \textbf{domain constraints} that ensure the ``inputs'' to $\textsf{R}_v$ are constrained in the same way that their corresponding universally quantified variables are---store these, these will be conjuncted with the formula on the way up the AST once there are no more existential quantifiers. Specifically, these constraints encode multiplicity information that relational bounds cannot infer.
+      \item Add \textbf{range constraints} to the formula to ensure that the ``outputs'' of $S$ are constrained in the same way as $v$. Multiplicity information?
+  \end{itemize}
 
-    \subsubsection*{Skolem Expression}
+  \subsubsection*{Skolem Expression}
 
-    The \textbf{skolem expression}, $\textsf{E}_v$, is what actually replaces $v$. It is the result of joining each non-skolem $a_i \in S_\forall$ with the $\textsf{R}_v$, or $\textsf{E}_v := f~S_\forall~\textsf{R}_v$ where $f$ is defined as follows:
-    
-    \begin{align*}
-        f~[]~X& = X\\
-        f~a_i::L~X& = f~L~a_i.X
-    \end{align*}
+  The \textbf{skolem expression}, $\textsf{E}_v$, is what actually replaces $v$. It is the result of joining each non-skolem $a_i \in S_\forall$ with the $\textsf{R}_v$, or $\textsf{E}_v := f~S_\forall~\textsf{R}_v$ where $f$ is defined as follows:
+  
+  \begin{align*}
+      f~[]~X& = X\\
+      f~a_i::L~X& = f~L~a_i.X
+  \end{align*}
 
-    \subsubsection*{Upper Bound}
-    At the moment, Colocolo assumes all quantified variables will be quantified over sets. This way, the upper bound of the \textbf{skolem relation} is simply the cross product of the upper bound of each element in the relation.
+  \subsubsection*{Upper Bound}
+  At the moment, Colocolo assumes all quantified variables will be quantified over sets. This way, the upper bound of the \textbf{skolem relation} is simply the cross product of the upper bound of each strongly quantified variable (in order of declaration), together with the upper bound of $R$ in the last position.
 
-    \subsubsection*{Domain Constraints}
+  \subsubsection*{Domain Constraints}
 
-    Suppose $R$ is of arity $n$. We call $\textsf{U}$ the universe. Let $I_v = \textsf{R}_v.\textsf{U} \dots \textsf{U}$ where $\textsf{U}$ is joined to $\textsf{R}_v$ $n$ times. Let the $i$th declaration $a_i~:~m_i~R_i$ be the declaration that binds the $i$th variable, $a_i \in S_\forall$. Let $k = \text{length}(S_\forall)$. Our domain constraint is:
-    $$I_v ~ \texttt{in} ~ \{a_0~:~m_0~R_0, \dots, a_k~:~m_k~R_k~\vert~\top\}.$$
+  Suppose $R$ is of arity $n$. We call $\textsf{U}$ the universe. Let $I_v = \textsf{R}_v.\textsf{U} \dots \textsf{U}$ where $\textsf{U}$ is joined to $\textsf{R}_v$ $n$ times. Let the $i$th declaration $a_i~:~m_i~R_i$ be the declaration that binds the $i$th variable, $a_i \in S_\forall$. Let $k = \text{length}(S_\forall)$. Our domain constraint is:
+  $$I_v ~ \texttt{in} ~ \{a_0~:~m_0~R_0, \dots, a_k~:~m_k~R_k~\vert~\top\}.$$
 
-    Note the expression $\{a_0~:~m_0~R_0, \dots, a_k~:~m_k~R_k~\vert~\top\}$ defines a $k$-ary relation where the $i$th element obeys the $i$th \textbf{declaration} with no other constraints (any relation satisfies $\top$).
+  Note the expression $\{a_0~:~m_0~R_0, \dots, a_k~:~m_k~R_k~\vert~\top\}$ defines a $k$-ary relation where the $i$th element obeys the $i$th \textbf{declaration} with no other constraints (any relation satisfies $\top$).
 
-    The domain constraints for each subformula in the skolemized formula are lastly conjuncted together at the top level to form the final domain constraint for the whole formula.
+  The domain constraints for each subformula in the skolemized formula are lastly conjuncted together at the top level to form the final domain constraint for the whole formula.
 
 
 
-    \subsubsection*{Range Constraints}
-    Our range constraint is simply $\textsf{E}_v ~\texttt{in}~ m~R$. Let $f' := \textsf{skolemize}(f[\textsf{E}_v / v])$ in $Qv~:~m~R \mid f$ where $Q \in \{\exists, \neg \forall\}$. When our quantifier is $\exists$ the skolemized (sub)formula becomes $(\textsf{E}_v~\texttt{in}~ m~ R) \land f'$, otherwise when $Q$ is $\neg \forall$ we skolemize to $(\textsf{E}_v ~\texttt{in}~ m~R) \to f'$.
+  \subsubsection*{Range Constraints}
+  Our range constraint is simply $(\textsf{E}_v ~\texttt{in}~R)\land(m~\textsf{E}_v)$. Let $f' := \textsf{skolemize}(f[\textsf{E}_v / v])$ in $Qv~:~m~R \mid f$ where $Q \in \{\exists, \neg \forall\}$. When our quantifier is $\exists$ the skolemized (sub)formula becomes $(\textsf{E}_v ~\texttt{in}~R)\land(m~\textsf{E}_v) \land f'$, otherwise when $Q$ is $\neg \forall$ we skolemize to $[(\textsf{E}_v ~\texttt{in}~R)\land(m~\textsf{E}_v)] \to f'$.
 
-    \subsection{An example}
-    Let $A$ and $B$ be relations of arity $n$ and $m$ respectively, and let $P$ be a predicate on $A\times B$. Suppose we wish to skolemize the formula
-    \[\forall x : \texttt{some}\: A. \: \exists y : \texttt{some}\: B \mid P(x,y).\]
-    We first traverse through the universal quantification of $x$, adding $x : \texttt{some}\: A$ to $S_\forall$ and continuing. Next we reach the existentially quantified $y$. Following the above procedure, we define $\textsf{R}_y :_{m + 1} [\{\langle \rangle\}, A\times B]$. We can then define the domain constraint
-    \[\textsf{D}_y := \textsf{R}_y .\bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{some}\: A \mid \top\},\]
-    along with the skolem expression $\textsf{E}_y := x.\textsf{R}_y$. Note that $\textsf{R}_y .\bigdot\limits_{i = 1}^m$ means left-associatively joining \textsf{U} to $\textsf{R}_y$ $m$ times. Lastly, our range constraint is $(\textsf{E}_y~\texttt{in}~\texttt{some}~B)$. As the quantifier is just an $\exists$, our skolemized subformula becomes $(\textsf{E}_y ~ \texttt{in}~\texttt{some}~B) \land P(x, \textsf{E}_y)$. Conjuncted with the top level domain constraints, we obtain the total skolemized formula
-    \[\textsf{R}_y .\bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{some}\: A \mid \top\} \land (\textsf{E}_y ~ \texttt{in}~\texttt{some}~B) \land P(x, \textsf{E}_y).\]
-    Expanding this out, we get
-    \[\textsf{R}_y .\bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{some}\: A \mid \top\} \land (x.\textsf{R}_y ~ \texttt{in}~\texttt{some}~B) \land P(x, x.\textsf{R}_y).\]
+  \subsection{An example}
+  Let $A$ and $B$ be relations of arity $n$ and $m$ respectively, and let $P$ be a predicate on $A\times B$. Suppose we wish to skolemize the formula
+  \[\forall x : \texttt{one}\: A. \: \exists y : \texttt{some}\: B \mid P(x,y).\]
+  We first traverse through the universal quantification of $x$, adding $x : \texttt{one}\: A$ to $S_\forall$ and continuing. Next we reach the existentially quantified $y$. Following the above procedure, we define $\textsf{R}_y :_{m + 1} [\{\langle \rangle\}, U(A)\times U(B)]$, where $U(X)$ gives the upper bound on a relation $X$. We can then define the domain constraint
+  \[\textsf{D}_y := \textsf{R}_y \bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{one}\: A \mid \top\},\]
+  along with the skolem expression $\textsf{E}_y := x.\textsf{R}_y$. Note that $\textsf{R}_y .\bigdot\limits_{i = 1}^m$ means left-associatively joining \textsf{U} to $\textsf{R}_y$ $m$ times. Lastly, our range constraint is $(\textsf{E}_y~\texttt{in}~\texttt{some}~B)$. As the quantifier is just an $\exists$, our skolemized subformula becomes $(\textsf{E}_y ~ \texttt{in}~\texttt{some}~B) \land P(x, \textsf{E}_y)$. Conjuncted with the top level domain constraints, we obtain the total skolemized formula
+  \[\textsf{R}_y \bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{one}\: A \mid \top\} \land [(\textsf{E}_y ~ \texttt{in}~B) \land (\texttt{some} ~\textsf{E}_y)] \land P(x, \textsf{E}_y).\]
+  Expanding this out, we get
+  \[\textsf{R}_y \bigdot\limits_{i = 1}^m \textsf{U}~\texttt{in}~\{x : \texttt{one}\: A \mid \top\} \land [(x.\textsf{R}_y ~ \texttt{in}~B) \land (\texttt{some} ~x.\textsf{R}_y)] \land P(x, x.\textsf{R}_y).\]
 
-    \section{Reduction to Sat}
+  \section{Translation to SAT}
+  For Colocolo, we attempted to implement an optimized translation from arbitrary (quantifier-free) first-order boolean formulas to a CNF-SAT instance. In particular, we relied on Rosette's internal (symbolic) boolean AST representation, which we descended recursively and applied the following transformation rules:
+  \begin{equation}\label{transand}
+    \bigwedge_{i=1}^n F_i \leadsto \left(\bigwedge_{i=1}^n [\tilde{F}_i \lor \neg o]\right) \land \left(o \lor \bigvee_{i=1}^n \neg\tilde{F}_i\right),
+  \end{equation}
+  \begin{equation}\label{transor}
+    \bigvee_{i=1}^n F_i \leadsto \left(\bigwedge_{i=1}^n [\neg\tilde{F}_i \lor o]\right) \land \left(\neg o \lor \bigvee_{i=1}^n \tilde{F}_i\right).
+  \end{equation}
+  In these translations, $o$ is a fresh auxiliary variable that is true if and only if the original $n$-ary formula is true, and $\tilde{F}_i$ represents the corresponding auxiliary variable produced by recursively applying the rule to $F_i$. 
 
-    \section{Benchmarks}
+  In the process of translating, we also encode each original boolean variable and new auxiliary variable as an integer (with negative literals represented as the negation of the integer representation of the variable). Lastly, the instance was translated into DIMACS format and sent to Lingeling, a fast SAT solver \cite{biere17}.
+  \section{Results}
+  To evaluate our optimizations, we a supported subset of the standard benchmarks/examples bundled with Kodkod, which are written in Java and use the Kodkod internal representation for problems. We ran the benchmarks over all combinations of optimizations, and recorded the total time, solver time, and whether or not the SAT solver returned within a 30-second time limit. We had difficulty implementing a time limit for Rosette's internal solver, so we did not impose one.
+  \subsection{Meow: Compiling Kodkod to Ocelot}
+  In order to translate Kodkod benchmarks into Ocelot/Colocolo, we wrote \emph{Meow} in Java, a compiler from Kodkod ASTs into equivalent problem instantiations in Ocelot/Colocolo.
+  \paragraph{Graph structure.} Internally, Kodkod represents its formulas and expressions as nodes in a DAG, rather than a tree. This node sharing is crucial to Kodkod's internal notion of equality between relations (and nodes in general), and additionally improves memory performance. This means the translation into Colocolo cannot simply inline each node. To address this, we cached the Kodkod nodes during the graph traversal, and declared them in the compiled output in a topologically sorted order (where incoming edges represent syntactic children).
 
-    \subsection{Meow: Compiling Kodkod to Ocelot}
+  \paragraph{Ocelot limitations.} During our benchmark compilation, we discovered some limitations of Ocelot that went beyond the scope of our project. In particular,
+  \begin{itemize}
+    \item Ocelot currently has no support for integers, which Kodkod supports through extensive bit-blasting.
+    \item Ocelot has difficulties with higher-arity declarations in quantified formulas. In particular, Ocelot assumes all declarations to be unary, with \texttt{one} multiplicity.
+    \item Some relational operators are missing from Ocelot, such as relational override and if-then-else.
+  \end{itemize}
+  To deal with these restrictions, we only used benchmarks that did not utilize any of the mentioned features.
 
-    \section{Member Contributions}
+  \subsection{Benchmarks}
 
-    \textsf{Thomas} took the lead on understanding KodKod's implementation of skolemization and translating it into an equivalent algorithm over Colocolo's AST. \textsf{Altan} translated KodKod's algorithm for reducing a boolean formula to CNF and created a translator from KodKod's AST to that of Colocolo. Both \textsf{Thomas} and \textsf{Altan} spent time testing and fixing bugs in all parts of the project as well as running benchmarks.
+  \section{Member Contributions}
 
-    \begin{thebibliography}{999}
-        \bibitem{torlak07}
-          Torlak, Emina and Jackson, Daniel:
-          \emph{Kodkod: A Relational Model Finder},
-          Proceedings of the 13th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS'07).
-        \bibitem{bornholdt17}
-          Bornholdt, James and Torlak, Emina:
-          \emph{Synthesizing Memory Models from Framework Sketches and Litmus Tests},
-          Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI'17).
-        \bibitem{claessen03}
-          Claessen, Koen and S{\"o}rensson:
-          \emph{New Techniques that Improve {MACE}-style Model Finding}
-          Proceedings of Workshop on Model Computation (MODEL'03).
-        \bibitem{aloul03}
-          Aloul, Fadi A. and Sakallah, Karem A. and Markov, Igor L.:
-          \emph{Efficient Symmetry Breaking for Boolean Satisfiability}
-          Proceedings of the 18th International Joint Conference on Artificial Intelligence, (IJCAI'03).
-        \bibitem{andersen97}
-          Andersen, H.R. and Hulgaard, H.:
-          \emph{Boolean expression diagrams}
-          (LICS'97).
-        \bibitem{abdulla00}
-          Abdulla, P.A., Bjesse, P and Een, N.:
-          \emph{Symbolic reachability analysis based on sat-solvers}
-          (TACAS'00).
-      \end{thebibliography}
-  \end{document}
+  \textsf{Thomas} took the lead on understanding KodKod's implementation of skolemization and translating it into an equivalent algorithm over Colocolo's AST. \textsf{Altan} translated KodKod's algorithm for reducing a boolean formula to CNF and created a translator from KodKod's AST to that of Colocolo. Both \textsf{Thomas} and \textsf{Altan} spent time testing and fixing bugs in all parts of the project as well as running benchmarks.
+
+  \begin{thebibliography}{999}
+      \bibitem{abdulla00}
+        Abdulla, P.A., Bjesse, P and Een, N.:
+        \emph{Symbolic reachability analysis based on sat-solvers}
+        (TACAS'00).
+     \bibitem{aloul03}
+        Aloul, Fadi A. and Sakallah, Karem A. and Markov, Igor L.:
+        \emph{Efficient Symmetry Breaking for Boolean Satisfiability}
+        Proceedings of the 18th International Joint Conference on Artificial Intelligence, (IJCAI'03).
+      \bibitem{andersen97}
+        Andersen, H.R. and Hulgaard, H.:
+        \emph{Boolean expression diagrams}
+        (LICS'97).
+      \bibitem{bornholdt17}
+        Bornholdt, James and Torlak, Emina:
+        \emph{Synthesizing Memory Models from Framework Sketches and Litmus Tests},
+        Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI'17).
+      \bibitem{biere17}
+        Biere, Armin:
+        \emph{CaDiCaL, Lingeling, Plingeling, Treengeling, YalSAT Entering the SAT Competition 2017}, Proc. of SAT Competition 2017 -- Solver and Benchmark Descriptions.
+      \bibitem{claessen03}
+        Claessen, Koen and S{\"o}rensson:
+        \emph{New Techniques that Improve {MACE}-style Model Finding}
+        Proceedings of Workshop on Model Computation (MODEL'03).
+      \bibitem{torlak07}
+        Torlak, Emina and Jackson, Daniel:
+        \emph{Kodkod: A Relational Model Finder},
+        Proceedings of the 13th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS'07).
+    \end{thebibliography}
+\end{document}
  
