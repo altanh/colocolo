@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../../ocelot.rkt" "../util.rkt"
+(require "../../colocolo.rkt" "../util.rkt"
          (only-in "../../engine/matrix-ops.rkt" matrix/contains?)
          rackunit rackunit/text-ui)
 
