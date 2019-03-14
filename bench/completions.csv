@@ -1,0 +1,9 @@
+opts,alloy/DiffEg40,alloy/LatinSquare5,alloy/LatinSquare7,tptp/ALG195,tptp/ALG195_1,tptp/ALG197,tptp/ALG212,tptp/COM008,tptp/NUM378,tptp/TOP020
+plain,1,1,1,1,1,1,1,1,1,1
+skolem,1,1,1,1,1,1,1,1,1,1
+symmetry,1,1,1,1,1,1,1,1,1,1
+sat,1,1,1,1,1,1,1,1,1,1
+skolem+symmetry,1,1,1,1,1,1,1,1,1,1
+skolem+sat,1,1,1,1,1,1,1,1,1,1
+symmetry+sat,0,1,1,1,1,1,1,1,1,1
+skolem+symmetry+sat,0,1,1,1,1,1,1,1,1,1
