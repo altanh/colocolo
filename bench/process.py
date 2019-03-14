@@ -1,3 +1,9 @@
+import sys
+
+if len(sys.argv) < 2:
+    print("usage: " + sys.argv[0] + " results")
+    exit(1)
+
 def parse_time(line : str):
     tokens = line.split()
     real_time = tokens[5]
@@ -7,7 +13,7 @@ def parse_exit(line : str):
     tokens = line.split()
     return tokens[2]
 
-filename = "results5.txt"
+filename = sys.argv[1]
 
 with open(filename) as f:
     f.readline() # skip first empty line
@@ -72,12 +78,17 @@ with open(filename) as f:
         total_time = total_time + parse_time(f.readline())
 
         if sat:
+            exit_code = "10"
+
             f.readline() # making optimized SAT call...
-            f.readline() # starting solver...
-            f.readline() # CNF-SAT instance...
-            f.readline() #   originally had...
-            exit_code = parse_exit(f.readline())
-            solve_time = parse_time(f.readline())
+            maybe_time = f.readline() # starting solver... OR cpu ...
+            if maybe_time.split()[0] == "cpu":
+                solve_time = parse_time(maybe_time)
+            else:
+                f.readline() # CNF-SAT instance...
+                f.readline() #   originally had...
+                exit_code = parse_exit(f.readline())
+                solve_time = parse_time(f.readline())
 
             if exit_code != "10" and exit_code != "20":
                 completed = 0
@@ -115,9 +126,26 @@ with open(filename) as f:
     header = 'opts'
     for name in bench_names:
         header = header + ',' + name
-    print(header)
-    for opt, times in completes.items():
-        row = opt
-        for name in bench_names:
-            row = row + ',' + str(times[name])
-        print(row)
+    
+    fn_prefix = sys.argv[1].split('.')[0]
+    with open(fn_prefix + '-solve-times.csv', 'w') as stf:
+        stf.write(header + '\n')
+        for opt, times in solve_times.items():
+            row = opt
+            for name in bench_names:
+                row = row + ',' + str(times[name])
+            stf.write(row + '\n')
+    with open(fn_prefix + '-total-times.csv', 'w') as ttf:
+        ttf.write(header + '\n')
+        for opt, times in total_times.items():
+            row = opt
+            for name in bench_names:
+                row = row + ',' + str(times[name])
+            ttf.write(row + '\n')
+    with open(fn_prefix + '-completes.csv', 'w') as cf:
+        cf.write(header + '\n')
+        for opt, times in completes.items():
+            row = opt
+            for name in bench_names:
+                row = row + ',' + str(times[name])
+            cf.write(row + '\n')
