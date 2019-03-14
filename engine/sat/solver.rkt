@@ -6,7 +6,7 @@
 (provide (all-defined-out))
 
 (define solver-path "")
-(define solver-args "-q -T 30")
+(define solver-args (list "-q" "-T" "30"))
 
 (struct SAT (translator clauses unsat?) #:mutable)
 
@@ -51,10 +51,12 @@
     [else
      (printf "starting solver ~a...\n" solver-path)
      (match-define (list pout pin pid perr psig)
-       (process* solver-path solver-args))
+       (apply (curry process* solver-path) solver-args))
      (SAT-write SAT pin)
      (close-output-port pin)
      (psig 'wait)
+     (define code (psig 'exit-code))
+     (printf "exit code: ~a\n" code)
      (define sol (read-solution pout))
      (close-input-port pout)
      (close-input-port perr)
