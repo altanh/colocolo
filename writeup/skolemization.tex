@@ -21,7 +21,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{theorem}{Theorem}[section]
-\title{Colocolo\\\large Optimizations on Ocelot \\ A Racket backend for Alloy}
+\title{Colocolo\\\large Optimizations on Ocelot, a Relational Logic Solver in Rosette}
 \date{February 2019}
 \author{Thomas Bernardi, Altan Haan}
 
@@ -29,17 +29,16 @@
 
 \begin{document}
 	\maketitle
-	\begin{center}	
-		\textit{Everything is a lie, nothing is real.} \\
-  \end{center}
 
-  \section{Ocelot}
+  \section{Introduction}
 
-  Ocelot is an embedding of relational logic, including most of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Z3).
+  \paragraph{Ocelot.} Ocelot is an embedding of relational logic, including some of Alloy, in Rosette. It was originally aimed for use in MemSynth, a tool for reasoning about memory consistency: which is the problem of defining how parallel threads can observe their shared memory state \cite{bornholdt17}. As such, a couple of optimizations that could have been implemented were not because they would not have had much effect on the type of problems that MemSynth would present. In particular, Ocelot did not implement skolemization or reduction to CNF for SAT (it simply sends queries to Rosette's default solver, Z3).
 
-  Colocolo extends Ocelot to include these two optimizations. They are implemented based on reference implementations from KodKod, the current backend for Alloy.
+  \paragraph{Problem Statement.} Can these two optimizations, skolemization and translation to CNF, bring significant performance improvements to Ocelot?
+  
+  \paragraph{Our Approach} Colocolo extends Ocelot to include these two optimizations. We build on top of Ocelot's existing engine and implement the optimizations based on reference implementations from Kodkod, the current backend for Alloy.
 
-  \section{Skolemization}
+  \section{Skolemization}\label{sec:skolems}
 
   To distinguish between the syntax of quantifiers and their semantics we introduce two new terms:\\
   \theoremstyle{definition}
@@ -48,7 +47,7 @@
   \end{definition}
 
   \begin{definition}[Strong quantifier]
-      A \textbf{strong quantifier} is one that \emph{semantically} acts as an universal quantifier (i.e. $\forall$ and $\neg \exists$).
+      A \textbf{strong quantifier} is one that \emph{semantically} acts as a universal quantifier (i.e. $\forall$ and $\neg \exists$).
   \end{definition}
 
   Skolemization is a transformation that moves weak quantifiers to the highest syntactic level by replacing weakly quantified variables with functions (or relations in the case of alloy). Skolemization relies on a key second order equivalence:
@@ -59,7 +58,7 @@
 
   where $f(x)$ is a function (relation) that maps $x$ to $y$. Intuitively this is translating between ``forall $x$ there exists a $y$ such that $P(x, y)$'' into ``there exists a function $f : x \rightarrow y$ such that, forall $x$, $P(x, f(x))$.'' This is useful because the existence of $f$ is semantically equivalent to the satisfiability of the formula if $f$ is a variable sent to the solver.
 
-  In the case of bounded model checking (in both KodKod and Ocelot), this significantly reduces formula size. Suppose we have the universe $\{A_1, \dots, A_n\}$. Considering the formula from our equivalence \ref{eqv1}, $\forall x \exists y~.~P(x,y)$ would get translated as follows:
+  In the case of bounded model checking (in both Kodkod and Ocelot), this significantly reduces formula size. Suppose we have the universe $\{A_1, \dots, A_n\}$. Considering the formula from our equivalence \ref{eqv1}, $\forall x \exists y~.~P(x,y)$ would get translated as follows:
 
   Without skolemization:
   \begin{equation} \label{woskolem}
@@ -145,9 +144,20 @@
   In these translations, $o$ is a fresh auxiliary variable that is true if and only if the original $n$-ary formula is true, and $\tilde{F}_i$ represents the corresponding auxiliary variable produced by recursively applying the rule to $F_i$. 
 
   In the process of translating, we also encode each original boolean variable and new auxiliary variable as an integer (with negative literals represented as the negation of the integer representation of the variable). Lastly, the instance was translated into DIMACS format and sent to Lingeling, a fast SAT solver \cite{biere17}.
+
   \section{Results}
-  To evaluate our optimizations, we a supported subset of the standard benchmarks/examples bundled with Kodkod, which are written in Java and use the Kodkod internal representation for problems. We ran the benchmarks over all combinations of optimizations, and recorded the total time, solver time, and whether or not the SAT solver returned within a 30-second time limit. We had difficulty implementing a time limit for Rosette's internal solver, so we did not impose one.
-  \subsection{Meow: Compiling Kodkod to Ocelot}
+  \subsection{Implementation Challenges}
+
+  \paragraph{Skolemization.} While skolemization seems like it should be a simple algorithm, it contains many nuances in the context of relational logic. The largest challenge was translating these details from Kodkod's implementation to work with Ocelot's AST. We found that the best way to understand Kodkod's implementation was to create a mathematical representation as described in Section \ref{sec:skolems}. Once we had this, implementing it in Ocelot was relatively straightforward.
+
+  \paragraph{CNF Translation}
+
+  \subsection{Benchmarks}
+
+  Since we implemented a few optimizations on top of Ocelot, we are mainly interested in what sort of performance improvement we may have gotten. We are interested in both the overall improvement (time to solve an Ocelot problem), as well as performance of our final SMT/SAT query. To evaluate our optimizations, we translated a supported subset of the standard benchmarks/examples bundled with Kodkod, which are written in Java and use the Kodkod internal representation for problems. We ran the benchmarks over all combinations of optimizations, and recorded the total time, solver time, and whether or not the SAT solver returned within a 30-second time limit. We had difficulty implementing a time limit for Rosette's internal solver, so we did not impose one.
+
+
+  \subsubsection{Meow: Compiling Kodkod to Ocelot}
   In order to translate Kodkod benchmarks into Ocelot/Colocolo, we wrote \emph{Meow} in Java, a compiler from Kodkod ASTs into equivalent problem instantiations in Ocelot/Colocolo.
   \paragraph{Graph structure.} Internally, Kodkod represents its formulas and expressions as nodes in a DAG, rather than a tree. This node sharing is crucial to Kodkod's internal notion of equality between relations (and nodes in general), and additionally improves memory performance. This means the translation into Colocolo cannot simply inline each node. To address this, we cached the Kodkod nodes during the graph traversal, and declared them in the compiled output in a topologically sorted order (where incoming edges represent syntactic children).
 
@@ -158,13 +168,57 @@
     \item Some relational operators are missing from Ocelot, such as relational override and if-then-else.
   \end{itemize}
   To deal with these restrictions, we only used benchmarks that did not utilize any of the mentioned features.
+  
+  
+  \subsubsection{Benchmark Results}
 
-  \subsection{Benchmarks}
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{avg_total.pdf}   
+      \end{minipage}\hfill
+      \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{avg_solver.pdf}   
+      \end{minipage}
+      \caption{Avergages}
+      \label{fig:averages}
+    \end{figure}
+
+    \begin{figure}[h]
+      \includegraphics[width=\textwidth]{total.pdf}
+      \caption{Total Times}
+      \label{fig:total}
+    \end{figure}
+
+    % \begin{figure}[h]
+    %   \includegraphics[width=\textwidth]{solver.pdf}
+    %   \caption{Solver Times}
+    %   \label{fig:solver}
+    % \end{figure}
+
+    Figure \ref{fig:averages} is enough to get an idea of the effects of each optimization on performance but we included a detailed graph in Figure \ref{fig:total} to show that that there there are some cases where certain optimizations perform contrary to the averages shown in Figure \ref{fig:averages}.
+
+    Our best (and really only) performance improvement is when we use skolemization, where we get a $2.7\times$ speedup in total runtime and $4.1\times$ speedup in solver runtime. As discussed above, this is most likely due to the significant decrease in formula size we get when we apply skolemization.
+
+    \subsection{Project Potential}
+
+    We see significant improvement in performance with the application of skolemization. Further investigation is required to see why symmetry breaking and translation to CNF do not improve results. Answering these questions and addressing our findings would be a significant step towards a conference paper.
+
+    We believe that if we managed to get the performance improvement we hoped for from these two optimizations, implemented a compact boolean circuit representation within Ocelot, and addressed limitations in its expressiveness, then Colocolo would become a robust and expressive tool. In particular, if we could achieve the same performance as Kodkod, Colocolo would provide a much more versatile embedding of Alloy than is possible in Java, that would open up many new possibilities for exploration and experimentation in relational logic.
 
   \section{Member Contributions}
 
-  \textsf{Thomas} took the lead on understanding KodKod's implementation of skolemization and translating it into an equivalent algorithm over Colocolo's AST. \textsf{Altan} translated KodKod's algorithm for reducing a boolean formula to CNF and created a translator from KodKod's AST to that of Colocolo. Both \textsf{Thomas} and \textsf{Altan} spent time testing and fixing bugs in all parts of the project as well as running benchmarks.
+  Thomas took the lead on understanding Kodkod's implementation of skolemization and translating it into an equivalent algorithm over Colocolo's AST. Altan translated Kodkod's algorithm for reducing a boolean formula to CNF and created a translator from Kodkod's AST to that of Colocolo. Both Thomas and Altan spent time testing and fixing bugs in all parts of the project as well as running benchmarks.
 
+  \section{Course Topics}
+
+  Colocolo touched on most of the core topics that were covered in the course (and less from the applications seen towards the second half). The most important topics we drew from were \textbf{Bounded Model Checking} and \textbf{Relational Logic} in \textbf{Alloy} and of course \textbf{Rosette}. The project itself is a \textbf{Bounded Model Finder} written on top of \textbf{Rosette}---about half the course involved gaining proficiency in Rosette and an entire lecture was spent talking about \textbf{Bounded Model Finding}. Additionally, we applied knowledge gained about \textbf{SAT Solvers} and \textbf{SMT Solvers} in our translation to CNF and comparison to \textbf{Z3}.
+
+  The only topic we did not talk about in detail was \textbf{Skolemization}. We briefly touched on it but did not talk about any sort of implementation. Of course, our project involved a much deeper dive into the aforementioned topics than we had in class but this is to be expected. The clearest example were the details of \textbf{Alloy's Relational Logic}, which were not very clear from lecture and clear, extensive documentation was difficult to find. Again, this is to be expected, the point of the course is to have a starting point to jump off from. Overall, the course provided us with the skills we needed to be able to get started and have a good idea of what direction we needed to go.
+
+  \clearpage
   \begin{thebibliography}{999}
       \bibitem{abdulla00}
         Abdulla, P.A., Bjesse, P and Een, N.:
