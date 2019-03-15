@@ -1,6 +1,6 @@
 *.aux
 *.log
-*.pdf 
+skolemization.pdf 
 *.synctex.gz
 *.fdb_latexmk
 *.fls
