@@ -1,7 +1,7 @@
 # Colocolo
 
 Colocolo provides an embedding of relational logic in 
-[Rosette](https://emina.github.io/rosette), a solver-aided programming language. It is built on top of [colocolo](r), implementing a few key optimizations, most notably skolemization, Colocolo enables both verification
+[Rosette](https://emina.github.io/rosette), a solver-aided programming language. It is built on top of [Ocelot](https://github.com/jamesbornholt/ocelot/), implementing a few key optimizations, most notably skolemization, Colocolo enables both verification
 and synthesis of relational logic expressions.
 
 ## Installation
