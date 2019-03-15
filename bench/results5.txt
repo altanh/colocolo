@@ -773,10 +773,6 @@ cpu time: 162 real time: 162 gc time: 0
 -- making boolean interpretation...
 cpu time: 5 real time: 5 gc time: 0
 -- making optimized SAT call...
-
-
-
-exit code: 10
 cpu time: 0 real time: 0 gc time: 0
 
 tptp/NUM378-plain.rkt
@@ -795,10 +791,6 @@ cpu time: 167 real time: 168 gc time: 0
 -- making boolean interpretation...
 cpu time: 5 real time: 5 gc time: 0
 -- making optimized SAT call...
-
-
-
-exit code: 10
 cpu time: 1 real time: 0 gc time: 0
 
 tptp/NUM378-skolem-symmetry-sat.rkt
@@ -811,10 +803,6 @@ cpu time: 58 real time: 57 gc time: 4
 -- making boolean interpretation...
 cpu time: 5 real time: 6 gc time: 0
 -- making optimized SAT call...
-
-
-
-exit code: 10
 cpu time: 0 real time: 0 gc time: 0
 
 tptp/NUM378-skolem-symmetry.rkt
@@ -847,10 +835,6 @@ cpu time: 10 real time: 11 gc time: 0
 -- making boolean interpretation...
 cpu time: 5 real time: 4 gc time: 0
 -- making optimized SAT call...
-
-
-
-exit code: 10
 cpu time: 0 real time: 1 gc time: 0
 
 tptp/NUM378-symmetry.rkt
