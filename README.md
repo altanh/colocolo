@@ -10,7 +10,7 @@ Clone this respository, enter its directory, and run:
 
     raco pkg install
 
-In order for Colocolo to be able to invoke lingeling (our SAT solver of choice), you must add [lingeling](https://github.com/arminbiere/lingeling) to your PATH.
+In order for Colocolo to be able to invoke lingeling (our SAT solver of choice), you must add [lingeling](https://github.com/arminbiere/lingeling) to your PATH. If you wish to use a different SAT solver you can modify the process call in `engine/sat/solver.rkt`.
 
 ## Running the Benchmarks
 
@@ -37,7 +37,7 @@ If this fails on SAT invocations, make sure you have added [lingeling](https://g
 
 ## Compiling Kodkod Benchmarks with Meow
 
-Go to [Meow](https://github.com/altanh/meow) and install.
+In order to compile Kodkod instances (in Java), go to [Meow](https://github.com/altanh/meow) and follow the instructions. To get a Kodkod instance of any Alloy problem (`*.als`), paste it into Alloy and run it making sure that `Options > record the Kodkod Input/Output:` is toggled to `Yes`.
 
 
     
